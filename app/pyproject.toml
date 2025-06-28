@@ -1,0 +1,20 @@
+[tool.poetry]
+name = "app"
+version = "0.1.0"
+description = "An app that aggregates FastQC, FastP and HybPiper"
+authors = ["Daniel Marchena Parreira <danielmapar@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.scripts]
+fast-app = "app.main:main"
+
+[tool.poetry.dependencies]
+python = "^3.13"
+dotenv = "^0.9.9"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.3.4"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
