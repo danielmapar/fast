@@ -10,7 +10,11 @@ Vagrant.configure("2") do |config|
     # Every Vagrant development environment requires a box. You can search for
     # boxes at https://vagrantcloud.com/search.
   
-    config.vm.box = "ubuntu/jammy64"
+    config.vm.box = "cloud-image/ubuntu-24.04"
+
+    if Vagrant.has_plugin? "vagrant-vbguest"
+      config.vbguest.no_install  = true
+    end
 
     config.vm.provider :virtualbox do |vb|
       vb.name = "fast"
@@ -20,6 +24,22 @@ Vagrant.configure("2") do |config|
       # Customize the amount of memory on the VM:
       vb.memory = "16384" # 16GB
       vb.cpus = 4
+
+      # Enable 3D acceleration
+      vb.customize ["modifyvm", :id, "--accelerate3d", "on"]
+
+      # Add video memory
+      vb.customize ["modifyvm", :id, "--vram", "128"]
+
+      # Set graphics controller to VMSVGA
+      vb.customize ["modifyvm", :id, "--graphicscontroller", "vmsvga"]
+
+      # Enable USB 2.0
+      vb.customize ["modifyvm", :id, "--usb", "on"]
+
+      # Set much useful initial VM console size dimension(in 16:9 aspect ratio, but should be smaller than majority 1920x1080 physical screens)
+      vb.customize ["setextradata", :id, "GUI/LastGuestSizeHint", "1280,720"]
+
     end
   
     # Share an additional folder to the guest VM. The first argument is
@@ -64,36 +84,51 @@ Vagrant.configure("2") do |config|
           return STDIN.gets.chomp
         end 
     end
-  
+
     # Give execution permission to our scripts
-    config.vm.provision "file", source: "./scripts", destination: "/home/vagrant/scripts"
+    config.vm.provision "file", source: "./vagrant-scripts", destination: "/home/vagrant/vagrant-scripts"
     config.vm.provision "shell", inline: <<-SHELL
-      su -l vagrant -s "/bin/bash" -c "chmod +x /home/vagrant/scripts/*/*.sh"
+      su -l vagrant -s "/bin/bash" -c "chmod +x /home/vagrant/vagrant-scripts/*/*.sh"
     SHELL
+
     # Install Oh My ZSh
-    config.vm.provision "shell", path: "scripts/install/oh_my_zsh.sh"
+    config.vm.provision "shell", path: "vagrant-scripts/install/oh_my_zsh.sh"
+
     # Config Github SSH Keys
     config.vm.provision "shell", env: {"EMAIL" => GitHubEmail.new}, inline: <<-SHELL
-      su -l vagrant -s "/bin/zsh" -c "/home/vagrant/scripts/config/github_ssh_key.sh $EMAIL"
+      su -l vagrant -s "/bin/zsh" -c "/home/vagrant/vagrant-scripts/config/github_ssh_key.sh $EMAIL"
+      echo "SSH Key generated, press ENTER to continue..."
     SHELL
+
+    # Confirm Github SSH Keys
+    config.vm.provision "shell", env: {"EMAIL" => WaitingGithubSSHKey.new}, inline: <<-SHELL
+      echo "SSH Key setup completed."
+    SHELL
+
     # Install Brew
     config.vm.provision "shell", inline: <<-SHELL
-      su -l vagrant -s "/bin/zsh" -c "/home/vagrant/scripts/install/brew.sh"
+      su -l vagrant -s "/bin/zsh" -c "/home/vagrant/vagrant-scripts/install/brew.sh"
     SHELL
+
     # Install dos2unis
-    config.vm.provision "shell", path: "scripts/install/dos2unix.sh"
+    config.vm.provision "shell", path: "vagrant-scripts/install/dos2unix.sh"
+
     # Install Python
     config.vm.provision "shell", inline: <<-SHELL
-      su -l vagrant -s "/bin/zsh" -c "/home/vagrant/scripts/install/python.sh"
+      su -l vagrant -s "/bin/zsh" -c "/home/vagrant/vagrant-scripts/install/python.sh"
     SHELL
+
     # Install NodeJS
     config.vm.provision "shell", inline: <<-SHELL
-      su -l vagrant -s "/bin/zsh" -c "/home/vagrant/scripts/install/nodejs.sh"
+      su -l vagrant -s "/bin/zsh" -c "/home/vagrant/vagrant-scripts/install/nodejs.sh"
     SHELL
+
     # Install Java JRE/JDK
-    config.vm.provision "shell", path: "scripts/install/java.sh"
-    # Install Ubuntu Desktop Environment
-    config.vm.provision "shell", path: "scripts/install/ui.sh"
+    config.vm.provision "shell", path: "vagrant-scripts/install/java.sh"
+
+    # Install UI
+    config.vm.provision "shell", path: "vagrant-scripts/install/ui.sh"
+
     # Setup Complete message
     config.vm.provision "shell", inline: <<-SHELL
       echo "---> Setup Complete."

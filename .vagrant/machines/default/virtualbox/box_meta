@@ -1,1 +1,1 @@
-{"name":"ubuntu/jammy64","version":"20241002.0.0","provider":"virtualbox","directory":"boxes/ubuntu-VAGRANTSLASH-jammy64/20241002.0.0/virtualbox"}
+{"name":"cloud-image/ubuntu-24.04","version":"20250610.0.0","provider":"virtualbox","directory":"boxes/cloud-image-VAGRANTSLASH-ubuntu-24.04/20250610.0.0/amd64/virtualbox"}

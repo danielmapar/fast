@@ -23,10 +23,8 @@ In case you want to contribute to the project, you can follow the steps below:
   
 * Install [Vagrant](https://developer.hashicorp.com/vagrant/downloads).
 
-* Install the `vagrant-vbguest` plugin:
-  * `vagrant plugin install vagrant-vbguest`
-    * This plugin is used to install the correct version of VirtualBox Guest Additions. Otherwise, you may encounter issues with the shared folder, latency, and other issues.
-
 * Run `vagrant up --provision`.
 
-* Run `vagrant ssh` to get inside the VM afterwards.
+* Reload the VM: `vagrant reload`
+  * This should open a new window with the desktop environment.
+  * Run `vagrant ssh` in case you just need access to the VM terminal.
