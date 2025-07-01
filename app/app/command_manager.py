@@ -31,11 +31,9 @@ class CommandManager:
         try:
             self.library_downloader.setup_all_libraries()
         except Exception as e:
-            print(f"Error while setting up libraries: {e}")
-            return 
+            raise Exception(f"Error while setting up libraries: {e}")
 
         try:
             self.library_runner.test_all_libraries()
         except Exception as e:
-            print(f"Error while testing library installations: {e}")
-            return
+            raise Exception(f"Error while testing library installations: {e}")
