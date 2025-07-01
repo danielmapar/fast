@@ -9,7 +9,7 @@ load_dotenv()
 
 logger = get_logger()
 logger.info("Starting Fast App...")
-logger.configure()
+logger.configure(log_dir="~/.fast-app", log_file="app.log")
 
 class App(tk.Tk):
     def __init__(self):

@@ -17,7 +17,7 @@ class Logger:
             cls._instance = super().__new__(cls)
         return cls._instance
 
-    def __init__(self, log_file: str = "app.log", log_level: int = logging.INFO):
+    def __init__(self, log_dir: str = "~/.fast-app", log_file: str = "app.log", log_level: int = logging.INFO):
         """
         Initialize the logger singleton.
         
@@ -27,6 +27,11 @@ class Logger:
         """
         if Logger._initialized:
             return
+        
+        self.log_dir = os.path.expanduser(log_dir)
+        # Create log directory if it doesn't exist
+        if not os.path.exists(self.log_dir):
+            os.makedirs(self.log_dir)
         
         self.log_file = log_file
         self.log_level = log_level
@@ -49,9 +54,11 @@ class Logger:
             fmt='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
             datefmt='%Y-%m-%d %H:%M:%S'
         )
+
+        self.log_dir = os.path.expanduser(self.log_dir)
         
         # File handler
-        file_handler = logging.FileHandler(self.log_file, encoding='utf-8')
+        file_handler = logging.FileHandler(os.path.join(self.log_dir, self.log_file), encoding='utf-8')
         file_handler.setLevel(self.log_level)
         file_handler.setFormatter(formatter)
         
@@ -98,7 +105,7 @@ class Logger:
         self.logger.exception(message)
 
     @classmethod
-    def configure(cls, log_file: str = "app.log", log_level: int = logging.INFO) -> 'Logger':
+    def configure(cls, log_dir: str = "~/.fast-app", log_file: str = "app.log", log_level: int = logging.INFO) -> 'Logger':
         """
         Configure the logger singleton (can be called before first instantiation).
         
@@ -112,13 +119,14 @@ class Logger:
         if cls._instance is not None and cls._initialized:
             # Logger already exists, reconfigure it
             cls._instance.log_file = log_file
+            cls._instance.log_dir = log_dir
             cls._instance.log_level = log_level
             cls._instance.logger.handlers.clear()
             cls._instance._setup_logger()
         else:
             # Create new instance with configuration
             cls._instance = cls.__new__(cls)
-            cls._instance.__init__(log_file, log_level)
+            cls._instance.__init__(log_dir, log_file, log_level)
         
         return cls._instance
 
