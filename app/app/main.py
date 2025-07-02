@@ -49,12 +49,12 @@ class App(tk.Tk):
         self.progress_bar.start(10)
         
         # Create and start the thread with lambda function
-        setup_thread = LambdaThread(
+        self.setup_thread = LambdaThread(
             target_function=lambda: self.command_manager.setup_and_test_libraries(),
             on_success=lambda result: self.after(0, self.on_setup_success),
             on_error=lambda error: self.after(0, lambda: self.on_setup_error(error))
         )
-        setup_thread.start()
+        self.setup_thread.start()
 
     def on_setup_success(self):
         """Called when library setup succeeds - runs on main thread"""
@@ -64,6 +64,12 @@ class App(tk.Tk):
 
         # Create the tabbed interface
         self.create_app_main_screen()
+
+    def __del__(self):
+        self.setup_thread.join()
+        self.quit()
+        self.destroy()
+        exit()
     
     def on_setup_error(self, error):
         """Called when library setup fails - runs on main thread"""

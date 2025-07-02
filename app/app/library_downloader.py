@@ -5,9 +5,10 @@ import os
 import shutil
 import zipfile
 import logging
+import subprocess
 
 class LibraryDownloader:
-    def __init__(self, download_dir, jdk_path, fastqc_path, perl_path, fastp_path, remove_existing_files=True):
+    def __init__(self, download_dir, jdk_path, fastqc_path, perl_path, fastp_path, conda_path, remove_existing_files=True):
         # Create download directory if it doesn't exist
         self.download_dir = download_dir
 
@@ -32,6 +33,9 @@ class LibraryDownloader:
 
         # FastP dependencies
         self.fastp_path = fastp_path
+        
+        # HybPiper dependencies
+        self.conda_path = conda_path
 
     def setup_all_libraries(self) -> bool:
         if not self.download_and_extract_corretto_jdk():
@@ -42,7 +46,76 @@ class LibraryDownloader:
             raise Exception("Failed to download and extract Perl")
         if not self.download_and_extract_fastp():
             raise Exception("Failed to download and extract FastP")
+        if not self.download_and_intall_conda():
+            raise Exception("Failed to download and install Miniconda")
         return True
+    
+    def download_and_intall_conda(self):
+        """
+        Detects if running on Linux x64 and downloads/extracts Miniconda to download directory
+        """
+        # Check if running on Linux
+        if platform.system() != 'Linux':
+            self.logger.info(f"Not running on Linux (detected: {platform.system()}). Skipping Miniconda download.")
+            return False
+        
+        # Check if running on x64 architecture
+        machine = platform.machine().lower()
+        if machine not in ['x86_64', 'amd64']:
+            self.logger.info(f"Not running on x64 architecture (detected: {machine}). Skipping Miniconda download.")
+            return False
+        
+        self.logger.info("Detected Linux x64. Downloading Miniconda...")
+        
+        # URL and local filename (download to download directory)
+        url = f"https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh"
+        filename = os.path.join(self.download_dir, f"{self.conda_path}.sh")
+
+        # Check if Miniconda already exists
+        if os.path.exists(self.conda_path):
+            self.logger.info(f"Miniconda already exists at: {self.conda_path}")
+            return True
+        
+        try:
+            # Download the file
+            self.logger.info(f"Downloading from {url}...")
+            self.logger.info(f"Saving to: {filename}")
+            urllib.request.urlretrieve(url, filename)
+            self.logger.info(f"Downloaded {filename} successfully.")
+
+            # Make the file executable
+            os.chmod(filename, 0o755)
+            
+            # Run the installer
+            self.logger.info(f"Running {filename}...")
+            subprocess.run([filename, "-b", "-p", os.path.join(self.download_dir, self.conda_path)], check=True)
+            self.logger.info(f"Installed Miniconda to {self.download_dir} successfully.")
+
+            # Install HybPiper
+            self.logger.info(f"Setting up HybPiper conda environment...")
+            subprocess.run([os.path.join(self.download_dir, self.conda_path, "bin", "conda"), "create", "-y", "--name", "hybpiper"], check=True)
+            self.logger.info(f"Set up HybPiper conda environment successfully.")
+
+            # Add Conda Channels to install HybPiper
+            self.logger.info(f"Adding Conda channels to install HybPiper...")
+            subprocess.run([os.path.join(self.download_dir, self.conda_path, "bin", "conda"), "config", "--add", "channels", "defaults"], check=True)
+            subprocess.run([os.path.join(self.download_dir, self.conda_path, "bin", "conda"), "config", "--add", "channels", "bioconda"], check=True)
+            subprocess.run([os.path.join(self.download_dir, self.conda_path, "bin", "conda"), "config", "--add", "channels", "conda-forge"], check=True)
+            self.logger.info(f"Added Conda channels to install HybPiper successfully.")
+
+            # Activate and Install HybPiper in HybPiper conda environment
+            self.logger.info(f"Activating HybPiper conda environment...")
+            subprocess.run([os.path.join(self.download_dir, self.conda_path, "bin", "conda"), "create", "-y", "-n", "hybpiper", "hybpiper"], check=True)
+            subprocess.run([os.path.join(self.download_dir, self.conda_path, "bin", "conda"), "activate", "hybpiper"], check=True)
+            self.logger.info(f"Activated HybPiper conda environment successfully.")
+
+            return True
+        
+        except Exception as e:
+            self.logger.error(f"Error downloading or installing Miniconda: {e}")
+            return False
+        
+        
     
     def download_and_extract_fastp(self):
         """

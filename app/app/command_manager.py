@@ -11,8 +11,9 @@ class CommandManager:
         self.fastqc_path = os.path.join(self.download_dir, os.getenv("FASTQC_VERSION"))
         self.perl_path = os.path.join(self.download_dir, os.getenv("PERL_VERSION"))
         self.fastp_path = os.path.join(self.download_dir, os.getenv("FASTP_VERSION"))
+        self.conda_path = os.path.join(self.download_dir, os.getenv("CONDA_VERSION"))
 
-        self.library_downloader = LibraryDownloader(self.download_dir, self.jdk_path, self.fastqc_path, self.perl_path, self.fastp_path)
+        self.library_downloader = LibraryDownloader(self.download_dir, self.jdk_path, self.fastqc_path, self.perl_path, self.fastp_path, self.conda_path)
         self.library_runner = LibraryRunner(self.jdk_path, self.fastqc_path, self.perl_path, self.fastp_path)
 
         if not self.are_libraries_installed() and not self.is_user_connected_to_internet():
