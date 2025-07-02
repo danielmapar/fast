@@ -1,5 +1,5 @@
 import threading
-from app.logger import get_logger
+import logging
 
 class LambdaThread(threading.Thread):
     """Custom thread class that can execute lambda functions with callbacks"""
@@ -18,7 +18,7 @@ class LambdaThread(threading.Thread):
         self.target_function = target_function
         self.on_success = on_success
         self.on_error = on_error
-        self.logger = get_logger()
+        self.logger = logging.getLogger()
         
     def run(self):
         """Execute the target function and handle callbacks"""

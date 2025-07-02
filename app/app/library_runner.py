@@ -1,13 +1,13 @@
 import os
 import subprocess
-from app.logger import get_logger
+import logging
 
 class LibraryRunner:
     def __init__(self, jdk_path, fastqc_path, perl_path):
         self.jdk_path = jdk_path
         self.fastqc_path = fastqc_path
         self.perl_path = perl_path
-        self.logger = get_logger()
+        self.logger = logging.getLogger()
 
     def test_all_libraries(self):
         if not self.test_jdk_installation():

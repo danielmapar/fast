@@ -34,7 +34,7 @@ Vagrant.configure("2") do |config|
       # Set graphics controller to VMSVGA
       vb.customize ["modifyvm", :id, "--graphicscontroller", "vmsvga"]
 
-      # Enable USB 2.0
+      # Enable USB 1.1 (OHCI)
       vb.customize ["modifyvm", :id, "--usb", "on"]
 
       # Set much useful initial VM console size dimension(in 16:9 aspect ratio, but should be smaller than majority 1920x1080 physical screens)

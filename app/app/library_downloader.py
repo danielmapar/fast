@@ -4,14 +4,14 @@ import tarfile
 import os
 import shutil
 import zipfile
-from app.logger import get_logger
+import logging
 
 class LibraryDownloader:
     def __init__(self, download_dir, jdk_path, fastqc_path, perl_path, remove_existing_files=True):
         # Create download directory if it doesn't exist
         self.download_dir = download_dir
 
-        self.logger = get_logger()
+        self.logger = logging.getLogger()
 
         self.logger.info(f"Creating download directory at: {self.download_dir}")
         os.makedirs(self.download_dir, exist_ok=True) 

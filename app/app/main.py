@@ -3,18 +3,16 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 from app.lambda_thread import LambdaThread
 from app.command_manager import CommandManager
-from app.logger import get_logger
+from app.logger_config import setup_logger
+import logging
 
 load_dotenv()
-
-logger = get_logger()
-logger.info("Starting Fast App...")
-logger.configure(log_dir="~/.fast-app", log_file="app.log")
+setup_logger()
 
 class App(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.logger = get_logger()
+        self.logger = logging.getLogger()
 
         # Hide the main window
         self.withdraw()
@@ -60,7 +58,7 @@ class App(tk.Tk):
 
     def on_setup_success(self):
         """Called when library setup succeeds - runs on main thread"""
-        logger.info("Libraries setup completed successfully")
+        self.logger.info("Libraries setup completed successfully")
         self.progress_bar.stop()
         self.loading_screen.destroy()
 
