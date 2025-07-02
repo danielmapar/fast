@@ -16,6 +16,8 @@ Vagrant.configure("2") do |config|
       config.vbguest.no_install  = true
     end
 
+    config.vm.disk :disk, size: "40GB", primary: true
+
     config.vm.provider :virtualbox do |vb|
       vb.name = "fast"
       # Display the VirtualBox GUI when booting the machine

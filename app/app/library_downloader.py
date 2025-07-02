@@ -91,11 +91,6 @@ class LibraryDownloader:
             subprocess.run([filename, "-b", "-p", os.path.join(self.download_dir, self.conda_path)], check=True)
             self.logger.info(f"Installed Miniconda to {self.download_dir} successfully.")
 
-            # Install HybPiper
-            self.logger.info(f"Setting up HybPiper conda environment...")
-            subprocess.run([os.path.join(self.download_dir, self.conda_path, "bin", "conda"), "create", "-y", "--name", "hybpiper"], check=True)
-            self.logger.info(f"Set up HybPiper conda environment successfully.")
-
             # Add Conda Channels to install HybPiper
             self.logger.info(f"Adding Conda channels to install HybPiper...")
             subprocess.run([os.path.join(self.download_dir, self.conda_path, "bin", "conda"), "config", "--add", "channels", "defaults"], check=True)
@@ -103,11 +98,19 @@ class LibraryDownloader:
             subprocess.run([os.path.join(self.download_dir, self.conda_path, "bin", "conda"), "config", "--add", "channels", "conda-forge"], check=True)
             self.logger.info(f"Added Conda channels to install HybPiper successfully.")
 
+            print("DEBUG--->")
+            subprocess.run([os.path.join(self.download_dir, self.conda_path, "bin", "conda") , "init"], check=True)
+
             # Activate and Install HybPiper in HybPiper conda environment
-            self.logger.info(f"Activating HybPiper conda environment...")
+            self.logger.info(f"Installing HybPiper with a single command...")
             subprocess.run([os.path.join(self.download_dir, self.conda_path, "bin", "conda"), "create", "-y", "-n", "hybpiper", "hybpiper"], check=True)
-            subprocess.run([os.path.join(self.download_dir, self.conda_path, "bin", "conda"), "activate", "hybpiper"], check=True)
-            self.logger.info(f"Activated HybPiper conda environment successfully.")
+            subprocess.run([os.path.join(self.download_dir, self.conda_path, "bin", "conda"), "run", "-n", "hybpiper", "hybpiper", "--version"], check=True)
+
+            #conda_sh = os.path.join(self.download_dir, self.conda_path, "etc", "profile.d", "conda.sh")
+            #command = f"source {conda_sh} && conda activate hybpiper && hybpiper"
+            #subprocess.run(["bash", "-c", command], check=True)
+            
+            self.logger.info(f"Installed HybPiper successfully.")
 
             return True
         

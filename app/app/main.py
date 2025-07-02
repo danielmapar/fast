@@ -65,11 +65,8 @@ class App(tk.Tk):
         # Create the tabbed interface
         self.create_app_main_screen()
 
-    def __del__(self):
-        self.setup_thread.join()
-        self.quit()
-        self.destroy()
-        exit()
+    # TODO: Destroy thread if someone closes the window 
+    # TODO: Move code to activate hibpiper to proper place
     
     def on_setup_error(self, error):
         """Called when library setup fails - runs on main thread"""
