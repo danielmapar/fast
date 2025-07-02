@@ -7,7 +7,7 @@ import zipfile
 import logging
 
 class LibraryDownloader:
-    def __init__(self, download_dir, jdk_path, fastqc_path, perl_path, remove_existing_files=True):
+    def __init__(self, download_dir, jdk_path, fastqc_path, perl_path, fastp_path, remove_existing_files=True):
         # Create download directory if it doesn't exist
         self.download_dir = download_dir
 
@@ -25,9 +25,13 @@ class LibraryDownloader:
                 elif os.path.isdir(os.path.join(download_dir, file)):
                     shutil.rmtree(os.path.join(download_dir, file))
 
+        # FastQC dependencies
         self.jdk_path = jdk_path
         self.fastqc_path = fastqc_path
         self.perl_path = perl_path
+
+        # FastP dependencies
+        self.fastp_path = fastp_path
 
     def setup_all_libraries(self) -> bool:
         if not self.download_and_extract_corretto_jdk():
@@ -36,7 +40,56 @@ class LibraryDownloader:
             raise Exception("Failed to download and extract FastQC")
         if not self.download_and_extract_perl():
             raise Exception("Failed to download and extract Perl")
+        if not self.download_and_extract_fastp():
+            raise Exception("Failed to download and extract FastP")
         return True
+    
+    def download_and_extract_fastp(self):
+        """
+        Detects if running on Linux x64 and downloads/extracts FastP to download directory
+        """
+        # Check if running on Linux
+        if platform.system() != 'Linux':
+            self.logger.info(f"Not running on Linux (detected: {platform.system()}). Skipping FastP download.")
+            return False
+        
+        # Check if running on x64 architecture
+        machine = platform.machine().lower()
+        if machine not in ['x86_64', 'amd64']:
+            self.logger.info(f"Not running on x64 architecture (detected: {machine}). Skipping FastP download.")
+            return False
+        
+        self.logger.info("Detected Linux x64. Downloading FastP...")
+        
+        # URL and local filename (download to download directory)
+        url = "http://opengene.org/fastp/fastp.1.0.1"
+        filename = os.path.join(self.download_dir, "fastp.1.0.1")
+
+        # Check if FastP already exists
+        if os.path.exists(self.fastp_path):
+            self.logger.info(f"FastP already exists at: {self.fastp_path}")
+            return True
+        
+        try:
+            # Download the file
+            self.logger.info(f"Downloading from {url}...")
+            self.logger.info(f"Saving to: {filename}")
+            urllib.request.urlretrieve(url, filename)
+            self.logger.info(f"Downloaded {filename} successfully.")
+
+            # Move the fastp file to fastp_path
+            self.logger.info(f"Moving {filename} to {self.fastp_path}...")
+            shutil.move(filename, self.fastp_path)
+            self.logger.info(f"Moved FastP to {self.fastp_path} successfully.")
+
+            # Chmod +x the FastP executable
+            os.chmod(self.fastp_path, 0o755)
+            
+            return True
+        
+        except Exception as e:
+            self.logger.error(f"Error downloading FastP: {e}")
+            return False
     
     def download_and_extract_perl(self):
         """

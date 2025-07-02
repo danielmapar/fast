@@ -3,10 +3,11 @@ import subprocess
 import logging
 
 class LibraryRunner:
-    def __init__(self, jdk_path, fastqc_path, perl_path):
+    def __init__(self, jdk_path, fastqc_path, perl_path, fastp_path):
         self.jdk_path = jdk_path
         self.fastqc_path = fastqc_path
         self.perl_path = perl_path
+        self.fastp_path = fastp_path
         self.logger = logging.getLogger()
 
     def test_all_libraries(self):
@@ -16,7 +17,33 @@ class LibraryRunner:
             raise Exception("Failed to test FastQC installation")
         if not self.test_perl_installation():
             raise Exception("Failed to test Perl installation")
+        if not self.test_fastp_installation():
+            raise Exception("Failed to test FastP installation")
         return True
+    
+    def test_fastp_installation(self):
+        """
+        Test if the FastP installation is working by running fastp -v
+        """
+        fastp_executable = self.fastp_path
+        if not os.path.exists(fastp_executable):
+            self.logger.error(f"FastP executable not found at: {fastp_executable}")
+            return False
+        
+        try:
+            result = subprocess.run([fastp_executable, "-v"], capture_output=True, text=True, timeout=10)
+            
+            if result.returncode == 0:
+                self.logger.info(f"FastP test successful. Version info:")
+                self.logger.info(result.stdout)
+                return True
+            else:
+                self.logger.error(f"FastP test failed. Return code: {result.returncode}")
+                self.logger.error(f"Error output: {result.stderr}")
+                return False
+        except Exception as e:
+            self.logger.error(f"Error testing FastP installation: {e}")
+            return False
 
     def test_perl_installation(self):
         """

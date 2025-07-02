@@ -10,9 +10,10 @@ class CommandManager:
         self.jdk_path = os.path.join(self.download_dir, os.getenv("JDK_VERSION"))
         self.fastqc_path = os.path.join(self.download_dir, os.getenv("FASTQC_VERSION"))
         self.perl_path = os.path.join(self.download_dir, os.getenv("PERL_VERSION"))
+        self.fastp_path = os.path.join(self.download_dir, os.getenv("FASTP_VERSION"))
 
-        self.library_downloader = LibraryDownloader(self.download_dir, self.jdk_path, self.fastqc_path, self.perl_path)
-        self.library_runner = LibraryRunner(self.jdk_path, self.fastqc_path, self.perl_path)
+        self.library_downloader = LibraryDownloader(self.download_dir, self.jdk_path, self.fastqc_path, self.perl_path, self.fastp_path)
+        self.library_runner = LibraryRunner(self.jdk_path, self.fastqc_path, self.perl_path, self.fastp_path)
 
         if not self.are_libraries_installed() and not self.is_user_connected_to_internet():
             raise Exception("No internet connection and libraries are not installed! Please check your internet connection and try again.")
