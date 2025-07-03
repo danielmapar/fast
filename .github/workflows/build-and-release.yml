@@ -1,0 +1,89 @@
+name: Build and Release FastApp
+
+on:
+  push:
+    branches: [ main, dev ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ main, dev ]
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python 3.13
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.13'
+        
+    - name: Install pipx
+      run: |
+        python -m pip install --upgrade pip
+        python -m pip install pipx
+        python -m pipx ensurepath
+        
+    - name: Install Poetry 1.8.4
+      run: |
+        pipx install poetry==1.8.4
+        
+    - name: Install dependencies
+      working-directory: ./app
+      run: |
+        poetry install
+        
+    - name: Build executable
+      working-directory: ./app
+      run: |
+        poetry run pyinstaller --onefile --windowed --name FastApp app/main.py
+        
+    - name: Prepare artifact name
+      id: artifact-name
+      shell: bash
+      run: |
+        if [ "${{ matrix.os }}" == "windows-latest" ]; then
+          echo "artifact=FastApp-windows.exe" >> $GITHUB_OUTPUT
+          echo "binary=FastApp.exe" >> $GITHUB_OUTPUT
+        elif [ "${{ matrix.os }}" == "ubuntu-latest" ]; then
+          echo "artifact=FastApp-linux" >> $GITHUB_OUTPUT
+          echo "binary=FastApp" >> $GITHUB_OUTPUT
+        else
+          echo "artifact=FastApp-macos" >> $GITHUB_OUTPUT
+          echo "binary=FastApp" >> $GITHUB_OUTPUT
+        fi
+        
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ steps.artifact-name.outputs.artifact }}
+        path: app/dist/${{ steps.artifact-name.outputs.binary }}
+        
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    
+    steps:
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+      
+    - name: Create Release
+      id: create_release
+      uses: elgohr/Github-Release-Action@v5
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        title: FastApp ${{ github.ref_name }}
+        prerelease: true
+        
+    - name: Upload Linux Release Asset
+      uses: softprops/action-gh-release@v2
+      if: github.ref_type == 'tag'
+      with:
+        files: ./FastApp-linux/FastApp
