@@ -37,6 +37,9 @@ class App(tk.Tk):
         self.loading_screen.geometry("300x100")
         self.loading_screen.configure(bg='#FFFFFF')
 
+        # Bind the close event to a handler function
+        self.loading_screen.protocol("WM_DELETE_WINDOW", self.on_loading_screen_close)
+
         # Create a label in the loading screen
         label = tk.Label(self.loading_screen, text="Installing libraries...", font=('Arial', 16))
         label.pack(expand=True)
@@ -56,6 +59,20 @@ class App(tk.Tk):
         )
         self.setup_thread.start()
 
+    def on_loading_screen_close(self):
+        """Called when the loading screen is closed by the user"""
+        self.logger.info("Loading screen closed by user")
+        
+        # Stop the progress bar
+        self.progress_bar.stop()
+
+        # Destroy the loading screen
+        self.loading_screen.destroy()
+        
+        # Exit the application since setup was cancelled
+        self.destroy()
+        self.quit()
+
     def on_setup_success(self):
         """Called when library setup succeeds - runs on main thread"""
         self.logger.info("Libraries setup completed successfully")
@@ -64,9 +81,6 @@ class App(tk.Tk):
 
         # Create the tabbed interface
         self.create_app_main_screen()
-
-    # TODO: Destroy thread if someone closes the window 
-    # TODO: Move code to activate hibpiper to proper place
     
     def on_setup_error(self, error):
         """Called when library setup fails - runs on main thread"""
@@ -74,7 +88,7 @@ class App(tk.Tk):
         self.loading_screen.destroy()
         self.present_error_message(error)
 
-    def setup_frame_for_fastqc(self, frame):
+    def setup_frame_for_fastqc(self):
         
         self.fastqc_frame = ttk.Frame(self.notebook)
         self.notebook.add(self.fastqc_frame, text='FastQC')
@@ -83,7 +97,7 @@ class App(tk.Tk):
         label = tk.Label(self.fastqc_frame, text="FastQC", font=('Arial', 16))
         label.pack(expand=True)
     
-    def setup_frame_for_fastp(self, frame):
+    def setup_frame_for_fastp(self):
         
         self.fastp_frame = ttk.Frame(self.notebook)
         self.notebook.add(self.fastp_frame, text='FastP')
@@ -92,7 +106,7 @@ class App(tk.Tk):
         label = tk.Label(self.fastp_frame, text="FastP", font=('Arial', 16))
         label.pack(expand=True)
     
-    def setup_frame_for_hybpiper(self, frame):
+    def setup_frame_for_hybpiper(self):
         
         self.hybpiper_frame = ttk.Frame(self.notebook)
         self.notebook.add(self.hybpiper_frame, text='HybPiper')
@@ -125,13 +139,13 @@ class App(tk.Tk):
         self.notebook.pack(fill='both', expand=True, padx=10, pady=10)
         
         # Create Tab 1 (FastQC)
-        self.setup_frame_for_fastqc(self.notebook)
+        self.setup_frame_for_fastqc()
         
         # Create Tab 2 (FastP)
-        self.setup_frame_for_fastp(self.notebook)
+        self.setup_frame_for_fastp()
         
         # Create Tab 3 (HybPiper)
-        self.setup_frame_for_hybpiper(self.notebook)
+        self.setup_frame_for_hybpiper()
 
     def center_window(self):
         self.update_idletasks()

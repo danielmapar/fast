@@ -18,12 +18,13 @@ class LambdaThread(threading.Thread):
         self.target_function = target_function
         self.on_success = on_success
         self.on_error = on_error
-        self.logger = logging.getLogger()
+        self.logger = logging.getLogger()        
         
     def run(self):
         """Execute the target function and handle callbacks"""
         try:
             result = self.target_function()
+            
             if self.on_success:
                 self.on_success(result)
         except Exception as e:
