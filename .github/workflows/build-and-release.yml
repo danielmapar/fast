@@ -8,7 +8,7 @@ on:
     branches: [ main, dev ]
 
 jobs:
-  build:
+  build-app:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -68,8 +68,8 @@ jobs:
         name: ${{ steps.artifact-name.outputs.artifact }}
         path: app/dist/${{ steps.artifact-name.outputs.binary }}
         
-  release:
-    needs: build
+  release-app:
+    needs: build-app
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/v')
     
