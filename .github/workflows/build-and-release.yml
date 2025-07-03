@@ -18,16 +18,15 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
       
-    - name: Set up Python 3.13
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.13'
-        
     - name: Install pipx
       run: |
-        python -m pip install --upgrade pip
-        python -m pip install pipx
-        python -m pipx ensurepath
+        sudo apt update
+        sudo apt install -y pipx
+        
+    - name: Configure pipx
+      run: |
+        pipx ensurepath
+        echo "$HOME/.local/bin" >> $GITHUB_PATH
         
     - name: Install Poetry 1.8.4
       run: |
