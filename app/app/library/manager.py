@@ -1,9 +1,9 @@
 import os
-from app.library_downloader import LibraryDownloader
-from app.library_runner import LibraryRunner
 import requests
+from app.library.downloader import LibraryDownloader
+from app.library.runner import LibraryRunner
 
-class CommandManager:
+class LibraryManager:
 
     def __init__(self):
         self.download_dir = os.path.expanduser(os.getenv("DOWNLOAD_DIR"))

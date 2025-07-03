@@ -12,6 +12,10 @@ class LibraryRunner:
         self.logger = logging.getLogger()
 
     def test_all_libraries(self):
+        self.logger.info("------------------------------------------")
+        self.logger.info(f"------- Testing all libraries -------")
+        self.logger.info("------------------------------------------")
+
         if not self.test_jdk_installation():
             raise Exception("Failed to test JDK installation")
         if not self.test_fastqc_installation():
@@ -22,6 +26,11 @@ class LibraryRunner:
             raise Exception("Failed to test FastP installation")
         if not self.test_hybpiper_installation():
             raise Exception("Failed to test HybPiper installation")
+        
+        self.logger.info("------------------------------------------")
+        self.logger.info(f"------- All libraries tested successfully -------")
+        self.logger.info("------------------------------------------")
+
         return True
     
     def test_hybpiper_installation(self):

@@ -1,7 +1,7 @@
 import threading
 import logging
 
-class LambdaThread(threading.Thread):
+class LambdaThreadRunner(threading.Thread):
     """Custom thread class that can execute lambda functions with callbacks"""
     
     def __init__(self, target_function, on_success=None, on_error=None, daemon=True):

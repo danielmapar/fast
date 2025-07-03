@@ -41,6 +41,10 @@ class LibraryDownloader:
                 shutil.rmtree(os.path.join(self.download_dir, file))
 
     def setup_all_libraries(self) -> bool:
+        self.logger.info("------------------------------------------")
+        self.logger.info(f"------- Setting up all libraries -------")
+        self.logger.info("------------------------------------------")
+
         if not self.download_and_extract_corretto_jdk():
             raise Exception("Failed to download and extract Amazon Corretto JDK")
         if not self.download_and_extract_fastqc():
@@ -53,6 +57,11 @@ class LibraryDownloader:
             raise Exception("Failed to download and install Miniconda")
         if not self.download_and_intall_hybpiper():
             raise Exception("Failed to download and install HybPiper")
+        
+        self.logger.info("------------------------------------------")
+        self.logger.info(f"------- Libraries setup successfully -------")
+        self.logger.info("------------------------------------------")
+
         return True
 
     def download_and_intall_hybpiper(self):
