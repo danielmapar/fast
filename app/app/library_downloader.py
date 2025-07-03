@@ -9,22 +9,16 @@ import subprocess
 
 class LibraryDownloader:
     def __init__(self, download_dir, jdk_path, fastqc_path, perl_path, fastp_path, conda_path, remove_existing_files=True):
-        # Create download directory if it doesn't exist
-        self.download_dir = download_dir
-
+        
         self.logger = logging.getLogger()
-
+        
+        self.download_dir = download_dir
+        
         self.logger.info(f"Creating download directory at: {self.download_dir}")
         os.makedirs(self.download_dir, exist_ok=True) 
 
-        # Remove all files inside the download directory
-        if remove_existing_files:
-            self.logger.info(f"Removing all files inside the download directory at: {self.download_dir}")
-            for file in os.listdir(download_dir):
-                if os.path.isfile(os.path.join(download_dir, file)):
-                    os.remove(os.path.join(download_dir, file))
-                elif os.path.isdir(os.path.join(download_dir, file)):
-                    shutil.rmtree(os.path.join(download_dir, file))
+        if os.environ.get("FORCE_LIBRARY_INSTALL") == "true":
+            self.remove_all_libraries()
 
         # FastQC dependencies
         self.jdk_path = jdk_path
@@ -37,6 +31,15 @@ class LibraryDownloader:
         # HybPiper dependencies
         self.conda_path = conda_path
 
+    def remove_all_libraries(self):
+        # Remove all files inside the download directory
+        self.logger.info(f"Removing all files inside the download directory at: {self.download_dir}")
+        for file in os.listdir(self.download_dir):
+            if os.path.isfile(os.path.join(self.download_dir, file)):
+                os.remove(os.path.join(self.download_dir, file))
+            elif os.path.isdir(os.path.join(self.download_dir, file)):
+                shutil.rmtree(os.path.join(self.download_dir, file))
+
     def setup_all_libraries(self) -> bool:
         if not self.download_and_extract_corretto_jdk():
             raise Exception("Failed to download and extract Amazon Corretto JDK")
@@ -48,7 +51,50 @@ class LibraryDownloader:
             raise Exception("Failed to download and extract FastP")
         if not self.download_and_intall_conda():
             raise Exception("Failed to download and install Miniconda")
+        if not self.download_and_intall_hybpiper():
+            raise Exception("Failed to download and install HybPiper")
         return True
+
+    def download_and_intall_hybpiper(self):
+        """
+        Detects if running on Linux x64 and downloads/extracts HybPiper to download directory
+        """
+        # Check if running on Linux
+        if platform.system() != 'Linux':
+            self.logger.info(f"Not running on Linux (detected: {platform.system()}). Skipping HybPiper download.")
+            return False
+        
+        # Check if running on x64 architecture
+        machine = platform.machine().lower()
+        if machine not in ['x86_64', 'amd64']:
+            self.logger.info(f"Not running on x64 architecture (detected: {machine}). Skipping HybPiper download.")
+            return False
+        
+        self.logger.info("Detected Linux x64. Setting up HybPiper...")
+
+        try:
+            # Add Conda Channels to install HybPiper
+            self.logger.info(f"Adding Conda channels to install HybPiper...")
+            subprocess.run([os.path.join(self.download_dir, self.conda_path, "bin", "conda"), "config", "--add", "channels", "defaults"], check=True)
+            subprocess.run([os.path.join(self.download_dir, self.conda_path, "bin", "conda"), "config", "--add", "channels", "bioconda"], check=True)
+            subprocess.run([os.path.join(self.download_dir, self.conda_path, "bin", "conda"), "config", "--add", "channels", "conda-forge"], check=True)
+            self.logger.info(f"Added Conda channels to install HybPiper successfully.")
+
+            # Initialize Conda
+            self.logger.info(f"Initializing Conda...")
+            subprocess.run([os.path.join(self.download_dir, self.conda_path, "bin", "conda") , "init"], check=True)
+            self.logger.info(f"Initialized Conda successfully.")
+            
+            # Create HybPiper conda environment
+            self.logger.info(f"Creating HybPiper conda environment...")
+            subprocess.run([os.path.join(self.download_dir, self.conda_path, "bin", "conda"), "create", "-y", "-n", "hybpiper", "hybpiper"], check=True)
+            self.logger.info(f"Created HybPiper conda environment successfully.")
+    
+            return True
+        
+        except Exception as e:
+            self.logger.error(f"Error downloading or installing HybPiper: {e}")
+            return False
     
     def download_and_intall_conda(self):
         """
@@ -86,39 +132,22 @@ class LibraryDownloader:
             # Make the file executable
             os.chmod(filename, 0o755)
             
-            # Run the installer
+            # Run the Miniconda installer
             self.logger.info(f"Running {filename}...")
             subprocess.run([filename, "-b", "-p", os.path.join(self.download_dir, self.conda_path)], check=True)
             self.logger.info(f"Installed Miniconda to {self.download_dir} successfully.")
 
-            # Add Conda Channels to install HybPiper
-            self.logger.info(f"Adding Conda channels to install HybPiper...")
-            subprocess.run([os.path.join(self.download_dir, self.conda_path, "bin", "conda"), "config", "--add", "channels", "defaults"], check=True)
-            subprocess.run([os.path.join(self.download_dir, self.conda_path, "bin", "conda"), "config", "--add", "channels", "bioconda"], check=True)
-            subprocess.run([os.path.join(self.download_dir, self.conda_path, "bin", "conda"), "config", "--add", "channels", "conda-forge"], check=True)
-            self.logger.info(f"Added Conda channels to install HybPiper successfully.")
 
-            print("DEBUG--->")
-            subprocess.run([os.path.join(self.download_dir, self.conda_path, "bin", "conda") , "init"], check=True)
-
-            # Activate and Install HybPiper in HybPiper conda environment
-            self.logger.info(f"Installing HybPiper with a single command...")
+            # Create HybPiper conda environment
+            self.logger.info(f"Creating HybPiper conda environment...")
             subprocess.run([os.path.join(self.download_dir, self.conda_path, "bin", "conda"), "create", "-y", "-n", "hybpiper", "hybpiper"], check=True)
-            subprocess.run([os.path.join(self.download_dir, self.conda_path, "bin", "conda"), "run", "-n", "hybpiper", "hybpiper", "--version"], check=True)
-
-            #conda_sh = os.path.join(self.download_dir, self.conda_path, "etc", "profile.d", "conda.sh")
-            #command = f"source {conda_sh} && conda activate hybpiper && hybpiper"
-            #subprocess.run(["bash", "-c", command], check=True)
-            
-            self.logger.info(f"Installed HybPiper successfully.")
+            self.logger.info(f"Created HybPiper conda environment successfully.")
 
             return True
         
         except Exception as e:
             self.logger.error(f"Error downloading or installing Miniconda: {e}")
             return False
-        
-        
     
     def download_and_extract_fastp(self):
         """

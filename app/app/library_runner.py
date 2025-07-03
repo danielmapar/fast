@@ -3,11 +3,12 @@ import subprocess
 import logging
 
 class LibraryRunner:
-    def __init__(self, jdk_path, fastqc_path, perl_path, fastp_path):
+    def __init__(self, jdk_path, fastqc_path, perl_path, fastp_path, conda_path):
         self.jdk_path = jdk_path
         self.fastqc_path = fastqc_path
         self.perl_path = perl_path
         self.fastp_path = fastp_path
+        self.conda_path = conda_path
         self.logger = logging.getLogger()
 
     def test_all_libraries(self):
@@ -19,7 +20,21 @@ class LibraryRunner:
             raise Exception("Failed to test Perl installation")
         if not self.test_fastp_installation():
             raise Exception("Failed to test FastP installation")
+        if not self.test_hybpiper_installation():
+            raise Exception("Failed to test HybPiper installation")
         return True
+    
+    def test_hybpiper_installation(self):
+        """
+        Test if the HybPiper installation is working by running hybpiper --version
+        """
+        try:
+            subprocess.run([os.path.join(self.conda_path, "bin", "conda"), "run", "-n", "hybpiper", "hybpiper", "--version"], check=True)
+            return True
+        except Exception as e:
+            self.logger.error(f"Error testing HybPiper installation: {e}")
+            return False
+
     
     def test_fastp_installation(self):
         """
