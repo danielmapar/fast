@@ -2,7 +2,6 @@ import tkinter as tk
 from tkinter import messagebox
 import logging
 import dotenv
-from app.library.manager import LibraryManager
 from app.ui.loading_screen import LoadingScreen
 from app.ui.main_window import MainWindow
 from app.logger.config import setup_logger
@@ -15,7 +14,7 @@ class App(tk.Tk):
     def __init__(self):
         super().__init__()
         self.logger = logging.getLogger()
-        self.withdraw()  # Hide initially
+        self.withdraw()  # Hide initially to show loading screen
         
         try:
             self.show_loading_screen()

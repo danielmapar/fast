@@ -10,4 +10,15 @@ This application is an aggregator of [FastQC`](https://github.com/s-andrews/Fast
 
 * Run the app: `poetry run fast-app`
 
+## Build an executable
+
+* Build the executable: `poetry run pyinstaller --onefile --windowed --name FastApp app/main.py`
+
+* The executable will be available in the `app/dist` folder. The executable is named `FastApp`.
+
+
+
+
+
+
 

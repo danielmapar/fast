@@ -2,3 +2,12 @@
 .DS_Store
 .vscode/
 .idea/
+app/dist/
+app/build/
+app/app.egg-info/
+app/app/__pycache__/
+app/app/ui/__pycache__/
+app/app/thread/__pycache__/
+app/app/library/__pycache__/
+app/app/logger/__pycache__/
+app/app/ui/styles/__pycache__/
