@@ -107,6 +107,16 @@ Vagrant.configure("2") do |config|
       echo "SSH Key setup completed."
     SHELL
 
+    # Install Git Pre Commit
+    config.vm.provision "shell", inline: <<-SHELL
+      su -l vagrant -s "/bin/zsh" -c "/home/vagrant/vagrant-scripts/install/pre-commit.sh"
+    SHELL
+
+    # Install Pre Commit Hooks to existing repositories
+    config.vm.provision "shell", inline: <<-SHELL
+      su -l vagrant -s "/bin/zsh" -c "/home/vagrant/vagrant-scripts/config/install_pre_commits.sh"
+    SHELL
+
     # Install Brew
     config.vm.provision "shell", inline: <<-SHELL
       su -l vagrant -s "/bin/zsh" -c "/home/vagrant/vagrant-scripts/install/brew.sh"
