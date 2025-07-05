@@ -4,7 +4,11 @@ This application is an aggregator of [FastQC`](https://github.com/s-andrews/Fast
 
 ## Installation
 
-TODO
+* Download the latest release from the [GitHub Releases](https://github.com/danielmapar/fast/releases/latest) page.
+
+* Give the `FastApp` executable permissions by right clicking on it and selecting `Properties` > `Permissions` > `Allow executing file as program`.
+
+* Run the app by double clicking on the `FastApp` executable.
 
 ## Local Development
 
@@ -28,3 +32,5 @@ In case you want to contribute to the project, you can follow the steps below:
 * Reload the VM: `vagrant reload`
   * This should open a new window with the desktop environment.
   * Run `vagrant ssh` in case you just need access to the VM terminal.
+
+* Follow the instructions in the [app/README.md](app/README.md) file to run the FastApp.
