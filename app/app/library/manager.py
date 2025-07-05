@@ -1,7 +1,10 @@
 import os
-import requests
+
+import requests  # type: ignore
+
 from app.library.downloader import LibraryDownloader
 from app.library.runner import LibraryRunner
+
 
 class LibraryManager:
 
@@ -13,17 +16,36 @@ class LibraryManager:
         self.fastp_path = os.path.join(self.download_dir, os.getenv("FASTP_VERSION"))
         self.conda_path = os.path.join(self.download_dir, os.getenv("CONDA_VERSION"))
 
-        self.library_downloader = LibraryDownloader(self.download_dir, self.jdk_path, self.fastqc_path, self.perl_path, self.fastp_path, self.conda_path)
-        self.library_runner = LibraryRunner(self.jdk_path, self.fastqc_path, self.perl_path, self.fastp_path, self.conda_path)
+        self.library_downloader = LibraryDownloader(
+            self.download_dir,
+            self.jdk_path,
+            self.fastqc_path,
+            self.perl_path,
+            self.fastp_path,
+            self.conda_path,
+        )
+        self.library_runner = LibraryRunner(
+            self.jdk_path,
+            self.fastqc_path,
+            self.perl_path,
+            self.fastp_path,
+            self.conda_path,
+        )
 
-        if not self.are_libraries_installed() and not self.is_user_connected_to_internet():
-            raise Exception("No internet connection and libraries are not installed! Please check your internet connection and try again.")
+        if (
+            not self.are_libraries_installed()
+            and not self.is_user_connected_to_internet()
+        ):
+            raise Exception(
+                "No internet connection and libraries are not installed! "
+                "Please check your internet connection and try again."
+            )
 
     def is_user_connected_to_internet(self):
         try:
             response = requests.get("https://www.google.com", timeout=5)
             return response.status_code == 200
-        except:
+        except Exception:
             return False
 
     def are_libraries_installed(self):

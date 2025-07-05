@@ -20,8 +20,6 @@ This application is an aggregator of [FastQC`](https://github.com/s-andrews/Fast
 
 * Create a new tag: `git tag v0.0.1`
 
-* Push the tag: `git push origin v0.0.1`    
+* Push the tag: `git push origin v0.0.1`
 
 * The release will be automatically created by the [GitHub Actions workflow](../.github/workflows/build-and-release.yml).
-
-
