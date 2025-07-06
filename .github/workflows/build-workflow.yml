@@ -1,0 +1,108 @@
+name: Build Workflow
+
+on:
+  workflow_call:
+    inputs:
+      os-matrix:
+        description: 'Operating systems to build on'
+        required: false
+        type: string
+        default: '["ubuntu-latest"]'
+      python-version:
+        description: 'Python version to use'
+        required: false
+        type: string
+        default: '3.13'
+      poetry-version:
+        description: 'Poetry version to use'
+        required: false
+        type: string
+        default: '1.8.4'
+      app-name:
+        description: 'Name of the application'
+        required: false
+        type: string
+        default: 'FastApp'
+      working-directory:
+        description: 'Working directory for the app'
+        required: false
+        type: string
+        default: './app'
+      build-windowed:
+        description: 'Whether to build as windowed application'
+        required: false
+        type: boolean
+        default: true
+
+jobs:
+  build-app:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: ${{ fromJson(inputs.os-matrix) }}
+        
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python ${{ inputs.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ inputs.python-version }}
+        
+    - name: Install pipx (Ubuntu)
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        sudo apt update
+        sudo apt install -y pipx
+        
+    - name: Install pipx (macOS)
+      if: matrix.os == 'macos-latest'
+      run: |
+        brew install pipx
+        
+    - name: Install pipx (Windows)
+      if: matrix.os == 'windows-latest'
+      run: |
+        python -m pip install --user pipx
+        python -m pipx ensurepath
+        
+    - name: Install Poetry ${{ inputs.poetry-version }}
+      run: |
+        pipx install poetry==${{ inputs.poetry-version }}
+        
+    - name: Configure Poetry to use Python ${{ inputs.python-version }}
+      working-directory: ${{ inputs.working-directory }}
+      run: |
+        poetry env use python${{ inputs.python-version }}
+        
+    - name: Install dependencies
+      working-directory: ${{ inputs.working-directory }}
+      run: |
+        poetry install
+        
+    - name: Build executable
+      working-directory: ${{ inputs.working-directory }}
+      run: |
+        poetry run pyinstaller --onefile ${{ inputs.build-windowed && '--windowed' || '' }} --name ${{ inputs.app-name }} app/main.py
+        
+    - name: Prepare artifact name
+      id: artifact-name
+      shell: bash
+      run: |
+        if [ "${{ matrix.os }}" == "windows-latest" ]; then
+          echo "artifact=${{ inputs.app-name }}-windows.exe" >> $GITHUB_OUTPUT
+          echo "binary=${{ inputs.app-name }}.exe" >> $GITHUB_OUTPUT
+        elif [ "${{ matrix.os }}" == "ubuntu-latest" ]; then
+          echo "artifact=${{ inputs.app-name }}-linux" >> $GITHUB_OUTPUT
+          echo "binary=${{ inputs.app-name }}" >> $GITHUB_OUTPUT
+        else
+          echo "artifact=${{ inputs.app-name }}-macos" >> $GITHUB_OUTPUT
+          echo "binary=${{ inputs.app-name }}" >> $GITHUB_OUTPUT
+        fi
+        
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ steps.artifact-name.outputs.artifact }}
+        path: ${{ inputs.working-directory }}/dist/${{ steps.artifact-name.outputs.binary }} 

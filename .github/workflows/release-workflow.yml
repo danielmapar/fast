@@ -1,0 +1,65 @@
+name: Reusable Release Workflow
+
+on:
+  workflow_call:
+    inputs:
+      app-name:
+        description: 'Name of the application'
+        required: false
+        type: string
+        default: 'FastApp'
+      tag-pattern:
+        description: 'Tag pattern to match for releases'
+        required: false
+        type: string
+        default: 'v*'
+      prerelease:
+        description: 'Whether this is a prerelease'
+        required: false
+        type: boolean
+        default: true
+      release-title-prefix:
+        description: 'Prefix for release title'
+        required: false
+        type: string
+        default: 'FastApp'
+      artifact-patterns:
+        description: 'Multiline string of artifact patterns to include in release'
+        required: false
+        type: string
+        default: |
+          ./**/FastApp*
+      generate-release-notes:
+        description: 'Whether to generate release notes automatically'
+        required: false
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+
+jobs:
+  release-app:
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, format('refs/tags/{0}', inputs.tag-pattern))
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+      
+    - name: List downloaded artifacts
+      run: |
+        echo "Downloaded artifacts:"
+        find . -name "*${{ inputs.app-name }}*" -type f | head -20
+        
+    - name: Create Release
+      uses: softprops/action-gh-release@v2
+      if: github.ref_type == 'tag'
+      with:
+        name: ${{ inputs.release-title-prefix }} ${{ github.ref_name }}
+        prerelease: ${{ inputs.prerelease }}
+        generate_release_notes: ${{ inputs.generate-release-notes }}
+        files: ${{ inputs.artifact-patterns }} 
