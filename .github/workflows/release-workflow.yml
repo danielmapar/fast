@@ -8,11 +8,11 @@ on:
         required: false
         type: string
         default: 'FastApp'
-      tag-pattern:
-        description: 'Tag pattern to match for releases'
+      tag-prefix:
+        description: 'Tag prefix to match for releases (e.g., "v" for v1.0.0)'
         required: false
         type: string
-        default: 'v*'
+        default: 'v'
       prerelease:
         description: 'Whether this is a prerelease'
         required: false
@@ -41,7 +41,7 @@ permissions:
 jobs:
   release-app:
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, format('refs/tags/{0}', inputs.tag-pattern))
+    if: github.ref_type == 'tag' && startsWith(github.ref_name, inputs.tag-prefix)
     
     steps:
     - name: Checkout code

@@ -26,7 +26,7 @@ jobs:
     uses: ./.github/workflows/release-workflow.yml
     with:
       app-name: 'FastApp'
-      tag-pattern: 'v*'
+      tag-prefix: 'v'
       prerelease: true
       release-title-prefix: 'FastApp'
       artifact-patterns: |
