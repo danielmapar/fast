@@ -9,7 +9,8 @@ if [[ "${email}" =~ ^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$ ]]; then
     ssh-keygen -q -t rsa -b 4096 -C "${email}" -N '' -f ~/.ssh/id_rsa <<<y >/dev/null 2>&1
     echo "SSH keys generated, please setup GitHub with: "
     cat ~/.ssh/id_rsa.pub
-
+    echo "Setting up Git..."
+    git config --global core.autocrlf input
     git config --global user.name "${user}"
     git config --global user.email "${email}"
     git config --global --add oh-my-zsh.hide-status 1
