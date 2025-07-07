@@ -28,7 +28,6 @@ jobs:
       poetry-version: '1.8.4'
       app-name: 'FastApp'
       working-directory: './app'
-      build-windowed: true
         
   release-app:
     needs: build-app
