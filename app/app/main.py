@@ -1,6 +1,6 @@
-from .app import App
-from .env.load import load_env_vars
-from .logger.config import setup_logger
+from app.app import App
+from app.env.load import load_env_vars
+from app.logger.config import setup_logger
 
 load_env_vars()
 
