@@ -6,7 +6,7 @@ from app.library.manager import LibraryManager
 from app.thread.lambda_runner import LambdaThreadRunner
 
 
-class LoadingScreen:
+class LoadingWindow:
     def __init__(self, parent, on_success, on_error, on_cancel):
         self.parent = parent
         self.on_success = on_success
