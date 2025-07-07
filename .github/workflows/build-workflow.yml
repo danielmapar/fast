@@ -28,11 +28,7 @@ on:
         required: false
         type: string
         default: './app'
-      build-windowed:
-        description: 'Whether to build as windowed application'
-        required: false
-        type: boolean
-        default: true
+
 
 jobs:
   build-app:
@@ -73,7 +69,7 @@ jobs:
     - name: Build executable
       working-directory: ${{ inputs.working-directory }}
       run: |
-        poetry run pyinstaller --onefile ${{ inputs.build-windowed && '--windowed' || '' }} --add-data ".env:." --name ${{ inputs.app-name }} app/main.py
+        poetry run pyinstaller --clean FastApp.spec
         
     - name: Prepare artifact name
       id: artifact-name

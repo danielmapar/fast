@@ -12,6 +12,7 @@ fast-app = "app.main:main"
 python = ">=3.13,<3.14"
 dotenv = "^0.9.9"
 requests = "^2.32.4"
+pillow = "^11.3.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.4"

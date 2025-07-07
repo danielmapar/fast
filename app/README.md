@@ -18,7 +18,7 @@ This application is an aggregator of [FastQC`](https://github.com/s-andrews/Fast
 
 * Build the executable by running the following command:
     ```bash
-    poetry run pyinstaller --name "FastApp" --windowed --onefile --add-data ".env:." --clean "app/main.py"
+    poetry run pyinstaller --clean FastApp.spec
     ```
 
 * The executable will be available in the `app/dist` folder. The executable is named `FastApp`.
