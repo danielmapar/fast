@@ -2,13 +2,12 @@ import logging
 import tkinter as tk
 from tkinter import messagebox
 
-import dotenv
-
+from app.env.load import load_env_vars
 from app.logger.config import setup_logger
 from app.ui.loading_screen import LoadingScreen
 from app.ui.main_window import MainWindow
 
-dotenv.load_dotenv()
+load_env_vars()
 
 setup_logger()
 
