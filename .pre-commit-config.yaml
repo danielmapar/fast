@@ -5,22 +5,22 @@ repos:
     rev: v5.0.0
     hooks:
       - id: trailing-whitespace
-        files: ^app/
+        files: ^app/app/
       - id: end-of-file-fixer
-        files: ^app/
+        files: ^app/app/
       - id: check-yaml
-        files: ^app/
+        files: ^app/app/
       - id: check-json
-        files: ^app/
+        files: ^app/app/
       - id: check-added-large-files
-        files: ^app/
+        files: ^app/app/
   # Formatting
   - repo: https://github.com/psf/black
     rev: 24.10.0
     hooks:
       - id: black
         language_version: python3
-        files: ^app/
+        files: ^app/app/
   # Linting
   - repo: https://github.com/PyCQA/flake8
     rev: 7.1.1
@@ -28,14 +28,14 @@ repos:
       - id: flake8
         additional_dependencies: [flake8-bugbear]
         args: [--config=app/.flake8]
-        files: ^app/
+        files: ^app/app/
   # Type checking
   - repo: https://github.com/pre-commit/mirrors-mypy
     rev: v1.13.0
     hooks:
       - id: mypy
         additional_dependencies: [mypy]
-        files: ^app/
+        files: ^app/app/
   # Import sorting
   - repo: https://github.com/PyCQA/isort
     rev: 5.13.2
@@ -43,4 +43,4 @@ repos:
       - id: isort
         args: ["--profile", "black", "--filter-files"]
         language_version: python3
-        files: ^app/
+        files: ^app/app/

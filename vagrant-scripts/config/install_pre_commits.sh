@@ -2,7 +2,7 @@
 
 echo "---> Installing pre-commit and hooks"
 
-cd ~/fast/app
+cd ~/fast
 
 pre-commit install --install-hooks || echo "---> Failed installing hooks"
 
