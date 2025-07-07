@@ -1,5 +1,7 @@
 # Fast App
 
+![FastApp Logo](./images/logo.png)
+
 This application is an aggregator of [FastQC`](https://github.com/s-andrews/FastQC), [Fastp](https://github.com/OpenGene/fastp) and [HybPiper](https://github.com/mossmatters/HybPiper). It abstract those CLI applications to a simple easy to use interface to streamline research efforts.
 
 ## Local Development
@@ -12,7 +14,10 @@ This application is an aggregator of [FastQC`](https://github.com/s-andrews/Fast
 
 ## Build an executable
 
-* Build the executable: `./build-metadata/linux/build.sh`
+* Build the executable by running the following command:
+    ```bash
+    poetry run pyinstaller --name "FastApp" --windowed --onefile --add-data ".env:." --clean "app/main.py"
+    ```
 
 * The executable will be available in the `app/dist` folder. The executable is named `FastApp`.
 
