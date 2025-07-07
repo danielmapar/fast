@@ -38,3 +38,11 @@ In case you want to contribute to the project, you can follow the steps below:
   * Run `vagrant ssh` in case you just need access to the VM terminal.
 
 * Follow the instructions in the [app/README.md](app/README.md) file to run the FastApp.
+
+## Contibutors
+
+* [Daniel Marpar](https://github.com/danielmapar)
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
