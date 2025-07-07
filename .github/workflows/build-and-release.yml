@@ -4,17 +4,25 @@ on:
   push:
     branches: [ main, dev ]
     tags: [ 'v*' ]
-  # pull_request:
-  #   branches: [ main, dev ]
+  pull_request:
+    branches: [ main, dev ]
 
 permissions:
   contents: write
 
 jobs:
+  run-pre-commit:
+    uses: ./.github/workflows/pre-commit-workflow.yml
+    with:
+      runner: 'ubuntu-latest'
+      python-enabled: true
+      python-version: '3.13'
+      automatic-commit-message: 'Automated Changes: Run pre-commit hooks to validate the project'
+
   build-app:
+    needs: run-pre-commit
     uses: ./.github/workflows/build-workflow.yml
     with:
-      os-matrix: '["ubuntu-latest"]'
       python-version: '3.13'
       poetry-version: '1.8.4'
       app-name: 'FastApp'

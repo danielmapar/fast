@@ -1,0 +1,54 @@
+name: Checkout and run pre-commit hooks to validate code
+run-name: ${{ github.actor }} is running pre-commit hooks on the ${{ github.repository }}
+
+on:
+  workflow_call:
+    inputs:
+      runner:
+        type: string
+        default: "ubuntu-latest"
+      python-enabled:
+        required: false
+        type: boolean
+        default: true
+      python-version:
+        required: false
+        type: string
+        default: "3.13"
+      project-path:
+        required: false
+        type: string
+        default: "."
+      automatic-commit-message:
+        required: false
+        type: string
+        default: "Automated Changes: Run pre-commit hooks to validate code"
+
+# permission can be added at job level or workflow level
+permissions:
+  contents: write # This is required for actions/checkout and stefanzweifel/git-auto-commit-action
+
+jobs:
+  run-code-pre-commit:
+    runs-on: ${{ inputs.runner }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        id: setup-python
+        if: ${{ inputs.python-enabled }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ inputs.python-version }}
+      
+      - name: Run pre-commit to validate code
+        uses: pre-commit/action@v3.0.1
+        with:
+          extra_args: --files ${{ inputs.project-path }}/**/*
+
+      - name: Commit changes back to repository
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          push_options: '--force'
+          commit_message: ${{ inputs.automatic-commit-message }}

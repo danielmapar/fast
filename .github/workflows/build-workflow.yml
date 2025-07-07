@@ -3,11 +3,11 @@ name: Build Workflow
 on:
   workflow_call:
     inputs:
-      os-matrix:
-        description: 'Operating systems to build on'
+      runner:
+        description: 'Runner to use'
         required: false
         type: string
-        default: '["ubuntu-latest"]'
+        default: 'ubuntu-latest'
       python-version:
         description: 'Python version to use'
         required: false
@@ -36,10 +36,7 @@ on:
 
 jobs:
   build-app:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: ${{ fromJson(inputs.os-matrix) }}
+    runs-on: ${{ inputs.runner }}
         
     steps:
     - name: Checkout code
@@ -50,22 +47,10 @@ jobs:
       with:
         python-version: ${{ inputs.python-version }}
         
-    - name: Install pipx (Ubuntu)
-      if: matrix.os == 'ubuntu-latest'
+    - name: Install pipx
       run: |
         sudo apt update
         sudo apt install -y pipx
-        
-    - name: Install pipx (macOS)
-      if: matrix.os == 'macos-latest'
-      run: |
-        brew install pipx
-        
-    - name: Install pipx (Windows)
-      if: matrix.os == 'windows-latest'
-      run: |
-        python -m pip install --user pipx
-        python -m pipx ensurepath
     
     - name: Create .env file based on env_sample file
       run: |
@@ -94,16 +79,8 @@ jobs:
       id: artifact-name
       shell: bash
       run: |
-        if [ "${{ matrix.os }}" == "windows-latest" ]; then
-          echo "artifact=${{ inputs.app-name }}-windows.exe" >> $GITHUB_OUTPUT
-          echo "binary=${{ inputs.app-name }}.exe" >> $GITHUB_OUTPUT
-        elif [ "${{ matrix.os }}" == "ubuntu-latest" ]; then
-          echo "artifact=${{ inputs.app-name }}-linux" >> $GITHUB_OUTPUT
-          echo "binary=${{ inputs.app-name }}" >> $GITHUB_OUTPUT
-        else
-          echo "artifact=${{ inputs.app-name }}-macos" >> $GITHUB_OUTPUT
-          echo "binary=${{ inputs.app-name }}" >> $GITHUB_OUTPUT
-        fi
+        echo "artifact=${{ inputs.app-name }}-linux" >> $GITHUB_OUTPUT
+        echo "binary=${{ inputs.app-name }}" >> $GITHUB_OUTPUT
         
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4
