@@ -17,6 +17,7 @@ jobs:
       runner: 'ubuntu-latest'
       python-enabled: true
       python-version: '3.13'
+      project-path: './app'
       automatic-commit-message: 'Automated Changes: Run pre-commit hooks to validate the project'
 
   build-app:
