@@ -66,6 +66,10 @@ jobs:
       run: |
         python -m pip install --user pipx
         python -m pipx ensurepath
+    
+    - name: Create .env file based on env_sample file
+      run: |
+        cp ${{ inputs.working-directory }}/.env_sample ${{ inputs.working-directory }}/.env
         
     - name: Install Poetry ${{ inputs.poetry-version }}
       run: |
