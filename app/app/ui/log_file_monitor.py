@@ -30,6 +30,12 @@ class LogFileMonitor(tk.Frame):
         self._title_text = title
         self._content_visible = True  # Track visibility state
 
+        # Initialize UI components - these will be set in _setup_ui()
+        self._content_frame: tk.Frame
+        self._title_frame: tk.Frame
+        self._title_button: tk.Button
+        self._text_widget: tk.Text
+
         self._setup_ui(height, width)
 
         if file_path:
@@ -46,12 +52,12 @@ class LogFileMonitor(tk.Frame):
         self.configure(bg=parent_bg)
 
         # Create title frame
-        self.title_frame = tk.Frame(self, bg=parent_bg)
-        self.title_frame.pack(fill=tk.X, pady=(0, 2))
+        self._title_frame = tk.Frame(self, bg=parent_bg)
+        self._title_frame.pack(fill=tk.X, pady=(0, 2))
 
         # Create clickable title button
-        self.title_button = tk.Button(
-            self.title_frame,
+        self._title_button = tk.Button(
+            self._title_frame,
             text=f"▼ {self._title_text}",
             bg="#333333",
             fg="white",
@@ -60,19 +66,19 @@ class LogFileMonitor(tk.Frame):
             anchor="w",
             command=self._toggle_content,
         )
-        self.title_button.pack(fill=tk.X)
+        self._title_button.pack(fill=tk.X)
 
         # Create content frame to hold scrollbar and text widget
-        self.content_frame = tk.Frame(self, bg="black")
-        self.content_frame.pack(fill=tk.BOTH, expand=True)
+        self._content_frame = tk.Frame(self, bg="black")
+        self._content_frame.pack(fill=tk.BOTH, expand=True)
 
         # Create scrollbar
-        scrollbar = tk.Scrollbar(self.content_frame)
+        scrollbar = tk.Scrollbar(self._content_frame)
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
         # Create text widget with dark theme
-        self.text_widget = tk.Text(
-            self.content_frame,
+        self._text_widget = tk.Text(
+            self._content_frame,
             height=height,
             width=width,
             bg="black",
@@ -84,21 +90,21 @@ class LogFileMonitor(tk.Frame):
             wrap=tk.WORD,
             yscrollcommand=scrollbar.set,
         )
-        self.text_widget.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        self._text_widget.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
         # Configure scrollbar
-        scrollbar.config(command=self.text_widget.yview)
+        scrollbar.config(command=self._text_widget.yview)
 
         # Insert placeholder text
-        self.text_widget.insert("1.0", "No log file specified...")
-        self.text_widget.config(state=tk.DISABLED)  # Make read-only
+        self._text_widget.insert("1.0", "No log file specified...")
+        self._text_widget.config(state=tk.DISABLED)  # Make read-only
 
     def _toggle_content(self) -> None:
         """Toggle the visibility of the log content"""
         if self._content_visible:
             # Hide content
-            self.content_frame.pack_forget()
-            self.title_button.config(text=f"▶ {self._title_text}")
+            self._content_frame.pack_forget()
+            self._title_button.config(text=f"▶ {self._title_text}")
             self._content_visible = False
             # Change background to parent's background to avoid black box
             parent_bg = (
@@ -109,8 +115,8 @@ class LogFileMonitor(tk.Frame):
             self.configure(bg=parent_bg)
         else:
             # Show content
-            self.content_frame.pack(fill=tk.BOTH, expand=True)
-            self.title_button.config(text=f"▼ {self._title_text}")
+            self._content_frame.pack(fill=tk.BOTH, expand=True)
+            self._title_button.config(text=f"▼ {self._title_text}")
             self._content_visible = True
             # Restore black background when content is visible
             self.configure(bg="black")
@@ -119,7 +125,7 @@ class LogFileMonitor(tk.Frame):
         """Update the title text"""
         self._title_text = title
         arrow = "▼" if self._content_visible else "▶"
-        self.title_button.config(text=f"{arrow} {self._title_text}")
+        self._title_button.config(text=f"{arrow} {self._title_text}")
 
     def set_file_path(self, file_path: str) -> None:
         """Change the file being monitored"""
@@ -144,9 +150,9 @@ class LogFileMonitor(tk.Frame):
         if file_path:
             self._start_monitoring()
         else:
-            self.text_widget.config(state=tk.NORMAL)
-            self.text_widget.insert("1.0", "No log file specified...")
-            self.text_widget.config(state=tk.DISABLED)
+            self._text_widget.config(state=tk.NORMAL)
+            self._text_widget.insert("1.0", "No log file specified...")
+            self._text_widget.config(state=tk.DISABLED)
 
     def _start_monitoring(self) -> None:
         """Start monitoring the current file for changes"""
@@ -189,9 +195,9 @@ class LogFileMonitor(tk.Frame):
 
     def _clear_display(self) -> None:
         """Clear the text display"""
-        self.text_widget.config(state=tk.NORMAL)
-        self.text_widget.delete("1.0", tk.END)
-        self.text_widget.config(state=tk.DISABLED)
+        self._text_widget.config(state=tk.NORMAL)
+        self._text_widget.delete("1.0", tk.END)
+        self._text_widget.config(state=tk.DISABLED)
 
     def _monitor_file(self) -> None:
         """Background thread function to monitor file changes"""
@@ -237,24 +243,24 @@ class LogFileMonitor(tk.Frame):
     def _update_display(self, content: str, replace: bool = False) -> None:
         """Update the text widget with new content (called on main thread)"""
         try:
-            self.text_widget.config(state=tk.NORMAL)
+            self._text_widget.config(state=tk.NORMAL)
 
             if replace:
                 # Replace all content
-                self.text_widget.delete("1.0", tk.END)
-                self.text_widget.insert("1.0", content)
+                self._text_widget.delete("1.0", tk.END)
+                self._text_widget.insert("1.0", content)
             else:
                 # Check if we need to clear placeholder text
-                current_content = self.text_widget.get("1.0", "end-1c")
+                current_content = self._text_widget.get("1.0", "end-1c")
                 if current_content in ["No log file specified...", ""]:
-                    self.text_widget.delete("1.0", tk.END)
+                    self._text_widget.delete("1.0", tk.END)
 
                 # Append new content
-                self.text_widget.insert(tk.END, content)
+                self._text_widget.insert(tk.END, content)
 
             # Auto-scroll to bottom
-            self.text_widget.see(tk.END)
-            self.text_widget.config(state=tk.DISABLED)
+            self._text_widget.see(tk.END)
+            self._text_widget.config(state=tk.DISABLED)
 
         except Exception as e:
             print(f"Error updating display: {e}")
