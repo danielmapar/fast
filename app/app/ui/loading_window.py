@@ -1,3 +1,4 @@
+import time
 import tkinter as tk
 import tkinter.ttk as ttk
 from typing import Callable, Optional
@@ -127,6 +128,7 @@ class LoadingWindow:
         self._on_close_callback()
 
     def _on_success_test_libraries(self) -> None:
+        time.sleep(5)  # Wait for the log file to be updated
         self._destroy_window()
         self._on_success_test_libraries_callback()
 

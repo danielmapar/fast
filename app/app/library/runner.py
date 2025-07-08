@@ -1,5 +1,4 @@
 import os
-import subprocess
 
 from app.logger.config import Logger, LogType
 from app.subprocess.manager import SubprocessManager
@@ -100,9 +99,7 @@ class LibraryRunner:
             return False
 
         try:
-            result = subprocess.run(
-                [fastp_executable, "-v"], capture_output=True, text=True, timeout=10
-            )
+            result = self._subprocess_manager.run_subprocess([fastp_executable, "-v"])
 
             if result.returncode == 0:
                 if self._logger_testing_libraries:
@@ -141,9 +138,7 @@ class LibraryRunner:
             return False
 
         try:
-            result = subprocess.run(
-                [perl_executable, "-v"], capture_output=True, text=True, timeout=10
-            )
+            result = self._subprocess_manager.run_subprocess([perl_executable, "-v"])
 
             if result.returncode == 0:
                 if self._logger_testing_libraries:
