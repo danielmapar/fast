@@ -213,6 +213,9 @@ class LogFileMonitor(tk.Frame):
                             new_content = f.read()
 
                             if new_content.strip():
+                                if len(new_content) == 0:
+                                    continue
+
                                 # Schedule GUI update on main thread
                                 def update_func(content=new_content) -> None:
                                     self._update_display(content)

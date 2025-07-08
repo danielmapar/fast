@@ -7,35 +7,49 @@ class SubprocessManager:
         # Loggers
         self.logger = logger
 
-    def run_subprocess(self, command: list[str]) -> None:
+    def run_subprocess(self, command: list[str]) -> subprocess.CompletedProcess[str]:
         """Run subprocess command with real-time line-by-line logging"""
         try:
             # Start the process
             process = subprocess.Popen(
                 command,
                 stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,  # Combine stderr with stdout
+                stderr=subprocess.PIPE,
                 text=True,
                 bufsize=1,  # Line buffered
                 universal_newlines=True,
             )
 
             # Read output line by line in real-time
-            stdout = process.stdout
-            if stdout is not None:
-                while True:
-                    line = stdout.readline()
-                    if not line:
-                        break
-                    # Log each line immediately as it comes
-                    self.logger.info(line.rstrip())
+            stdout_lines = []
+            stderr_lines = []
+
+            stdout, stderr = process.communicate()
+
+            # Log stdout
+            if stdout:
+                for line in stdout.split("\n"):
+                    if line.strip():
+                        self.logger.info(line)
+                        stdout_lines.append(line)
+
+            # Log stderr
+            if stderr:
+                for line in stderr.split("\n"):
+                    if line.strip():
+                        self.logger.info(line)
+                        stderr_lines.append(line)
 
             # Wait for process to complete and get return code
-            return_code = process.wait()
+            return_code = process.returncode
 
-            # Check if the process succeeded
-            if return_code != 0:
-                raise subprocess.CalledProcessError(return_code, command)
+            # Create and return CompletedProcess object
+            return subprocess.CompletedProcess(
+                args=command,
+                returncode=return_code,
+                stdout="\n".join(stdout_lines),
+                stderr="\n".join(stderr_lines),
+            )
 
         except Exception as e:
             self.logger.error(f"Subprocess failed: {' '.join(command)}")

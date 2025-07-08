@@ -81,8 +81,11 @@ class Logger:
 
         return logger
 
-    def get_logger(self, log_type: LogType) -> Optional[logging.Logger]:
-        return self.loggers.get(log_type.value)
+    def get_logger(self, log_type: LogType) -> logging.Logger:
+        logger = self.loggers.get(log_type.value)
+        if logger is None:
+            raise ValueError(f"Logger not found for log type: {log_type.value}")
+        return logger
 
     def get_log_file_path(self, log_type: LogType) -> str:
         return os.path.join(self.log_dir, f"{log_type.value}.log")
