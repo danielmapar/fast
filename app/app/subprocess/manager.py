@@ -1,5 +1,6 @@
 import logging
 import subprocess
+import threading
 
 
 class SubprocessManager:
@@ -20,28 +21,42 @@ class SubprocessManager:
                 universal_newlines=True,
             )
 
-            # Read output line by line in real-time
-            stdout_lines = []
-            stderr_lines = []
+            # Collect output for return value
+            stdout_lines: list[str] = []
+            stderr_lines: list[str] = []
 
-            stdout, stderr = process.communicate()
+            def read_output(pipe, output_lines, is_stderr=False):
+                """Read output from pipe and log it in real-time"""
+                if pipe is not None:
+                    for line in iter(pipe.readline, ""):
+                        line = line.rstrip()
+                        if line:
+                            # Log each line immediately as it comes
+                            if is_stderr:
+                                self.logger.error(line)
+                            else:
+                                self.logger.info(line)
+                            output_lines.append(line)
+                    pipe.close()
 
-            # Log stdout
-            if stdout:
-                for line in stdout.split("\n"):
-                    if line.strip():
-                        self.logger.info(line)
-                        stdout_lines.append(line)
+            # Create threads to read stdout and stderr simultaneously
+            stdout_thread = threading.Thread(
+                target=read_output, args=(process.stdout, stdout_lines, False)
+            )
+            stderr_thread = threading.Thread(
+                target=read_output, args=(process.stderr, stderr_lines, True)
+            )
 
-            # Log stderr
-            if stderr:
-                for line in stderr.split("\n"):
-                    if line.strip():
-                        self.logger.info(line)
-                        stderr_lines.append(line)
+            # Start threads
+            stdout_thread.start()
+            stderr_thread.start()
 
-            # Wait for process to complete and get return code
-            return_code = process.returncode
+            # Wait for process to complete
+            return_code = process.wait()
+
+            # Wait for output threads to finish
+            stdout_thread.join()
+            stderr_thread.join()
 
             # Create and return CompletedProcess object
             return subprocess.CompletedProcess(
