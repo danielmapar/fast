@@ -137,11 +137,11 @@ class LogFileMonitor(tk.Frame):
         self._last_file_size = 0
 
         # Update title to show file name if available
-        if file_path:
-            filename = os.path.basename(file_path)
-            self._set_title(f"Log Monitor - {filename}")
-        else:
-            self._set_title("Log Monitor")
+        # if file_path:
+        #     filename = os.path.basename(file_path)
+        #     self._set_title(f"Log Monitor - {filename}")
+        # else:
+        self._set_title("Log Monitor")
 
         # Clear the display
         self._clear_display()
