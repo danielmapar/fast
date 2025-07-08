@@ -1,112 +1,160 @@
-import logging
 import tkinter as tk
 import tkinter.ttk as ttk
-
-from PIL import Image, ImageTk
+from typing import Callable, Optional
 
 from app.library.manager import LibraryManager
-from app.resource.manager import open_image
+from app.logger.config import Logger, LogType
 from app.thread.lambda_runner import LambdaThreadRunner
+from app.ui.log_file_monitor import LogFileMonitor
+from app.ui.utils import WindowUtils
 
 
 class LoadingWindow:
-    def __init__(self, parent, on_success, on_error, on_cancel):
-        self.parent = parent
-        self.on_success = on_success
-        self.on_error = on_error
-        self.on_cancel = on_cancel
-        self.logger = logging.getLogger()
+    def __init__(
+        self,
+        parent: tk.Tk,
+        on_success_install_libraries_callback: Callable[[], None],
+        on_error_install_libraries_callback: Callable[[str], None],
+        on_success_test_libraries_callback: Callable[[], None],
+        on_error_test_libraries_callback: Callable[[str], None],
+        on_close_callback: Callable[[], None],
+    ) -> None:
+        self._parent = parent
 
-        self.setup_window()
-        self.start_setup()
+        # UI elements
+        self._status_label: Optional[tk.Label] = None
+        self._logo: Optional[tk.Label] = None
+        self._progress_bar: Optional[ttk.Progressbar] = None
+        self._window: Optional[tk.Toplevel] = None
+        self._log_monitor_panel: Optional[LogFileMonitor] = None
 
-    def setup_logo(self):
-        try:
-            logo_image = open_image("images/logo.png")
-            # Resize logo to fit nicely in the window
-            logo_image = logo_image.resize((80, 80), Image.Resampling.LANCZOS)
-            self.logo_photo = ImageTk.PhotoImage(logo_image)
+        # Callbacks
+        self._on_success_install_libraries_callback = (
+            on_success_install_libraries_callback
+        )
+        self._on_error_install_libraries_callback = on_error_install_libraries_callback
+        self._on_success_test_libraries_callback = on_success_test_libraries_callback
+        self._on_error_test_libraries_callback = on_error_test_libraries_callback
+        self._on_close_callback = on_close_callback
 
-            logo_label = tk.Label(self.window, image=self.logo_photo, bg="#FFFFFF")
-            logo_label.pack(pady=(10, 5))
-        except Exception as e:
-            self.logger.warning(f"Could not load logo: {e}")
-            # Don't exit the entire app, just continue without logo
+        # Library manager
+        self._library_manager = LibraryManager()
 
-    def setup_progress_bar(self):
+        # Threads
+        self._install_libraries_thread: Optional[LambdaThreadRunner] = None
+        self._test_libraries_thread: Optional[LambdaThreadRunner] = None
+
+        # Log files
+        self._installing_log_file = Logger().get_log_file_path(
+            LogType.INSTALLING_LIBRARIES
+        )
+        self._testing_log_file = Logger().get_log_file_path(LogType.TESTING_LIBRARIES)
+
+        # Setup window
+        self._setup_window()
+        self._start_install_libraries()
+
+    def _setup_window(self) -> None:
+        self._window = tk.Toplevel(self._parent)
+        self._window.title("Fast App Setup")
+        self._window.configure(bg="#FFFFFF")
+        self._window.protocol("WM_DELETE_WINDOW", self._handle_close)
+
+        WindowUtils.setup_logo(self._window)
+        self._setup_progress_bar()
+        self._setup_logs_pannel()
+        WindowUtils.center_window(self._window)
+
+    def _setup_progress_bar(self) -> None:
         # Setup progress bar and label
-        label = tk.Label(
-            self.window, text="Installing libraries...", font=("Arial", 16)
+        self._status_label = tk.Label(
+            self._window, text="Loading...", font=("Arial", 12, "bold"), bg="#FFFFFF"
         )
-        label.pack(expand=True)
+        self._status_label.pack(expand=True)
 
-        self.progress_bar = ttk.Progressbar(
-            self.window, orient="horizontal", length=300, mode="indeterminate"
+        self._progress_bar = ttk.Progressbar(
+            self._window, orient="horizontal", length=300, mode="indeterminate"
         )
-        self.progress_bar.pack(expand=True)
-        self.progress_bar.start(10)
+        self._progress_bar.pack(expand=True)
+        self._progress_bar.start(10)
 
-    def setup_window(self):
-        self.window = tk.Toplevel(self.parent)
-        self.window.title("Fast App Setup")
-        self.window.configure(bg="#FFFFFF")
-        self.window.protocol("WM_DELETE_WINDOW", self.on_close)
+    def _setup_logs_pannel(self) -> None:
+        if self._window:
+            self._log_monitor_panel = LogFileMonitor(
+                self._window, file_path=self._installing_log_file, height=12, width=100
+            )
+            self._log_monitor_panel.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
 
-        # Setup logo
-        self.setup_logo()
+    def _update_status_label(self, text: str) -> None:
+        if self._status_label:
+            self._status_label.config(text=text)
+        if self._window:
+            WindowUtils.center_window(self._window)
 
-        # Setup progress bar
-        self.setup_progress_bar()
-
-        # Center window
-        self.center_window()
-
-    def center_window(self):
-        self.window.update_idletasks()
-
-        # Use reqwidth/reqheight to get the calculated required size
-        width = self.window.winfo_reqwidth()
-        height = self.window.winfo_reqheight()
-
-        # Get screen dimensions
-        screen_width = self.window.winfo_screenwidth()
-        screen_height = self.window.winfo_screenheight()
-
-        # Calculate center position relative to screen
-        x = (screen_width // 2) - (width // 2)
-        y = (screen_height // 2) - (height // 2)
-
-        # Ensure window doesn't go off screen
-        x = max(0, x)
-        y = max(0, y)
-
-        self.window.geometry(f"{width}x{height}+{x}+{y}")
-
-        # Bring window to front
-        self.window.lift()
-        self.window.focus_force()
-
-    def start_setup(self):
-        self.setup_thread = LambdaThreadRunner(
-            target_function=lambda: LibraryManager().install_and_test_libraries(),
-            on_success=lambda result: self.parent.after(0, self.on_setup_success),
-            on_error=lambda error: self.parent.after(
-                0, lambda: self.on_setup_error(error)
+    def _start_install_libraries(self) -> None:
+        self._update_status_label("Installing libraries...")
+        self._install_libraries_thread = LambdaThreadRunner(
+            target_function=lambda: self._library_manager.install_libraries(),
+            on_success=lambda result: self._parent.after(
+                0, self._on_success_install_libraries
+            ),
+            on_error=lambda error: self._parent.after(
+                0, lambda: self._on_error_install_libraries(error)
             ),
         )
-        self.setup_thread.start()
+        self._install_libraries_thread.start()
 
-    def on_close(self):
-        self.progress_bar.stop()
-        self.window.destroy()
-        self.on_cancel()
+    def _start_test_libraries(self) -> None:
+        self._update_status_label("Validating installed libraries...")
 
-    def on_setup_success(self):
-        self.progress_bar.stop()
-        self.window.destroy()
-        self.on_success()
+        # Switch the log monitor to track the testing log file
+        if self._log_monitor_panel:
+            self._log_monitor_panel.set_file_path(self._testing_log_file)
 
-    def on_setup_error(self, error):
-        self.progress_bar.stop()
-        self.window.destroy()
-        self.on_error(error)
+        self._test_libraries_thread = LambdaThreadRunner(
+            target_function=lambda: self._library_manager.test_libraries(),
+            on_success=lambda result: self._parent.after(
+                0, self._on_success_test_libraries
+            ),
+            on_error=lambda error: self._parent.after(
+                0, lambda: self._on_error_test_libraries(error)
+            ),
+        )
+        self._test_libraries_thread.start()
+
+    def _handle_close(self) -> None:
+        self._destroy_window()
+        self._on_close_callback()
+
+    def _on_success_test_libraries(self) -> None:
+        self._destroy_window()
+        self._on_success_test_libraries_callback()
+
+    def _on_error_test_libraries(self, error: str) -> None:
+        self._destroy_window()
+        self._on_error_test_libraries_callback(error)
+
+    def _on_success_install_libraries(self) -> None:
+        self._on_success_install_libraries_callback()
+        self._start_test_libraries()
+
+    def _on_error_install_libraries(self, error: str) -> None:
+        self._destroy_window()
+        self._on_error_install_libraries_callback(error)
+
+    def _destroy_window(self) -> None:
+        # Join threads if they exist and are still alive
+        if self._install_libraries_thread is not None:
+            self._install_libraries_thread.join(timeout=1.0)
+
+        if self._test_libraries_thread is not None:
+            self._test_libraries_thread.join(timeout=1.0)
+
+        if self._log_monitor_panel is not None:
+            self._log_monitor_panel.destroy()
+
+        if self._progress_bar is not None:
+            self._progress_bar.stop()
+
+        if self._window is not None:
+            self._window.destroy()

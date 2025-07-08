@@ -1,18 +1,18 @@
 from app.app import App
 from app.env.load import load_env_vars
-from app.logger.config import setup_logger
+from app.logger.config import init_logger
 
 load_env_vars()
 
-setup_logger()
+init_logger()
 
 
-def run_app():
+def run_app() -> None:
     app = App()
     app.mainloop()
 
 
-def main():
+def main() -> None:
     run_app()
 
 

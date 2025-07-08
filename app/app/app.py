@@ -1,4 +1,3 @@
-import logging
 import tkinter as tk
 from tkinter import messagebox
 
@@ -7,36 +6,44 @@ from app.ui.main_window import MainWindow
 
 
 class App(tk.Tk):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
-        self.logger = logging.getLogger()
         self.withdraw()  # Hide initially to show loading screen
 
         try:
-            self.show_loading_screen()
+            self._show_loading_screen()
         except Exception as e:
-            self.present_error_message(e)
+            self._present_error_message(str(e))
 
-    def show_loading_screen(self):
+    def _show_loading_screen(self) -> None:
         self.loading_screen = LoadingWindow(
             parent=self,
-            on_success=self.on_setup_success,
-            on_error=self.on_setup_error,
-            on_cancel=self.on_setup_cancel,
+            on_success_install_libraries_callback=self._on_success_install_libraries,
+            on_error_install_libraries_callback=self._on_error_install_libraries,
+            on_success_test_libraries_callback=self._on_success_test_libraries,
+            on_error_test_libraries_callback=self._on_error_test_libraries,
+            on_close_callback=self._on_close,
         )
 
-    def on_setup_success(self):
+    def _on_success_test_libraries(self) -> None:
         self.deiconify()  # Show main window
         self.main_window = MainWindow(self)
 
-    def on_setup_error(self, error):
-        self.present_error_message(error)
+    def _on_error_test_libraries(self, error: str) -> None:
+        self._present_error_message(error)
 
-    def on_setup_cancel(self):
+    def _on_success_install_libraries(self) -> None:
+        pass
+
+    def _on_error_install_libraries(self, error: str) -> None:
+        self._present_error_message(error)
+
+    def _on_close(self) -> None:
         self.destroy()
         self.quit()
+        exit()
 
-    def present_error_message(self, error):
+    def _present_error_message(self, error: str) -> None:
         messagebox.showerror("Error", str(error))
         self.destroy()
         self.quit()

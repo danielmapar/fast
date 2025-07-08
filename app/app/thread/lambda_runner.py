@@ -1,11 +1,14 @@
-import logging
 import threading
+
+from app.logger.config import Logger, LogType
 
 
 class LambdaThreadRunner(threading.Thread):
     """Custom thread class that can execute lambda functions with callbacks"""
 
-    def __init__(self, target_function, on_success=None, on_error=None, daemon=True):
+    def __init__(
+        self, target_function, on_success=None, on_error=None, daemon=True
+    ) -> None:
         """
         Initialize the thread
 
@@ -19,9 +22,9 @@ class LambdaThreadRunner(threading.Thread):
         self.target_function = target_function
         self.on_success = on_success
         self.on_error = on_error
-        self.logger = logging.getLogger()
+        self.logger = Logger().get_logger(LogType.THREAD_RUNNER)
 
-    def run(self):
+    def run(self) -> None:
         """Execute the target function and handle callbacks"""
         try:
             result = self.target_function()
@@ -31,5 +34,5 @@ class LambdaThreadRunner(threading.Thread):
         except Exception as e:
             if self.on_error:
                 self.on_error(e)
-            else:
+            elif self.logger:
                 self.logger.error(f"Thread error: {e}")

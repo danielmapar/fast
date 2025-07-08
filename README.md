@@ -39,9 +39,9 @@ In case you want to contribute to the project, you can follow the steps below:
 
 * Follow the instructions in the [app/README.md](app/README.md) file to run the FastApp.
 
-## Contibutors
+## Contributors
 
-* [Daniel Marpar](https://github.com/danielmapar)
+* [Daniel Marchena Parreira](https://github.com/danielmapar)
 
 ## License
 

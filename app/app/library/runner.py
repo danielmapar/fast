@@ -1,24 +1,39 @@
-import logging
 import os
 import subprocess
 
+from app.logger.config import Logger, LogType
+
 
 class LibraryRunner:
-    def __init__(self, jdk_path, fastqc_path, perl_path, fastp_path, conda_path):
+    def __init__(
+        self,
+        jdk_path: str,
+        fastqc_path: str,
+        perl_path: str,
+        fastp_path: str,
+        conda_path: str,
+    ) -> None:
         self.jdk_path = jdk_path
         self.fastqc_path = fastqc_path
         self.perl_path = perl_path
         self.fastp_path = fastp_path
         self.conda_path = conda_path
-        self.logger = logging.getLogger()
+        self.logger_testing_libraries = Logger().get_logger(LogType.TESTING_LIBRARIES)
 
     def test_all_libraries(self) -> bool:
         if os.environ.get("IGNORE_LIBRARY_TEST") == "true":
             return True
 
-        self.logger.info("------------------------------------------")
-        self.logger.info("---------- Testing all libraries ---------")
-        self.logger.info("------------------------------------------")
+        if self.logger_testing_libraries:
+            self.logger_testing_libraries.info(
+                "------------------------------------------"
+            )
+            self.logger_testing_libraries.info(
+                "---------- Testing all libraries ---------"
+            )
+            self.logger_testing_libraries.info(
+                "------------------------------------------"
+            )
 
         if not self.test_jdk_installation():
             raise Exception("Failed to test JDK installation")
@@ -31,13 +46,20 @@ class LibraryRunner:
         if not self.test_hybpiper_installation():
             raise Exception("Failed to test HybPiper installation")
 
-        self.logger.info("-------------------------------------------------")
-        self.logger.info("------- All libraries tested successfully -------")
-        self.logger.info("-------------------------------------------------")
+        if self.logger_testing_libraries:
+            self.logger_testing_libraries.info(
+                "-------------------------------------------------"
+            )
+            self.logger_testing_libraries.info(
+                "------- All libraries tested successfully -------"
+            )
+            self.logger_testing_libraries.info(
+                "-------------------------------------------------"
+            )
 
         return True
 
-    def test_hybpiper_installation(self):
+    def test_hybpiper_installation(self) -> bool:
         """
         Test if the HybPiper installation is working by running hybpiper --version
         """
@@ -55,16 +77,22 @@ class LibraryRunner:
             )
             return True
         except Exception as e:
-            self.logger.error(f"Error testing HybPiper installation: {e}")
+            if self.logger_testing_libraries:
+                self.logger_testing_libraries.error(
+                    f"Error testing HybPiper installation: {e}"
+                )
             return False
 
-    def test_fastp_installation(self):
+    def test_fastp_installation(self) -> bool:
         """
         Test if the FastP installation is working by running fastp -v
         """
         fastp_executable = self.fastp_path
         if not os.path.exists(fastp_executable):
-            self.logger.error(f"FastP executable not found at: {fastp_executable}")
+            if self.logger_testing_libraries:
+                self.logger_testing_libraries.error(
+                    f"FastP executable not found at: {fastp_executable}"
+                )
             return False
 
         try:
@@ -73,27 +101,39 @@ class LibraryRunner:
             )
 
             if result.returncode == 0:
-                self.logger.info("FastP test successful. Version info:")
-                self.logger.info(result.stdout)
+                if self.logger_testing_libraries:
+                    self.logger_testing_libraries.info(
+                        "FastP test successful. Version info:"
+                    )
+                    self.logger_testing_libraries.info(result.stdout)
                 return True
             else:
-                self.logger.error(
-                    f"FastP test failed. Return code: {result.returncode}"
-                )
-                self.logger.error(f"Error output: {result.stderr}")
+                if self.logger_testing_libraries:
+                    self.logger_testing_libraries.error(
+                        f"FastP test failed. Return code: {result.returncode}"
+                    )
+                    self.logger_testing_libraries.error(
+                        f"Error output: {result.stderr}"
+                    )
                 return False
         except Exception as e:
-            self.logger.error(f"Error testing FastP installation: {e}")
+            if self.logger_testing_libraries:
+                self.logger_testing_libraries.error(
+                    f"Error testing FastP installation: {e}"
+                )
             return False
 
-    def test_perl_installation(self):
+    def test_perl_installation(self) -> bool:
         """
         Test if the Perl installation is working by running perl -v
         """
         perl_executable = os.path.join(self.perl_path, "bin", "perl")
 
         if not os.path.exists(perl_executable):
-            self.logger.error(f"Perl executable not found at: {perl_executable}")
+            if self.logger_testing_libraries:
+                self.logger_testing_libraries.error(
+                    f"Perl executable not found at: {perl_executable}"
+                )
             return False
 
         try:
@@ -102,34 +142,54 @@ class LibraryRunner:
             )
 
             if result.returncode == 0:
-                self.logger.info("Perl test successful. Version info:")
-                self.logger.info(result.stdout)
+                if self.logger_testing_libraries:
+                    self.logger_testing_libraries.info(
+                        "Perl test successful. Version info:"
+                    )
+                    self.logger_testing_libraries.info(result.stdout)
                 return True
             else:
-                self.logger.error(f"Perl test failed. Return code: {result.returncode}")
-                self.logger.error(f"Error output: {result.stderr}")
+                if self.logger_testing_libraries:
+                    self.logger_testing_libraries.error(
+                        f"Perl test failed. Return code: {result.returncode}"
+                    )
+                    self.logger_testing_libraries.error(
+                        f"Error output: {result.stderr}"
+                    )
                 return False
         except Exception as e:
-            self.logger.error(f"Error testing Perl installation: {e}")
+            if self.logger_testing_libraries:
+                self.logger_testing_libraries.error(
+                    f"Error testing Perl installation: {e}"
+                )
             return False
 
-    def test_fastqc_installation(self):
+    def test_fastqc_installation(self) -> bool:
         """
         Test if the FastQC installation is working by running fastqc -v
         """
         fastqc_executable = os.path.join(self.fastqc_path, "FastQC", "fastqc")
         if not os.path.exists(fastqc_executable):
-            self.logger.error(f"FastQC executable not found at: {fastqc_executable}")
+            if self.logger_testing_libraries:
+                self.logger_testing_libraries.error(
+                    f"FastQC executable not found at: {fastqc_executable}"
+                )
             return False
 
         perl_executable = os.path.join(self.perl_path, "bin", "perl")
         if not os.path.exists(perl_executable):
-            self.logger.error(f"Perl executable not found at: {perl_executable}")
+            if self.logger_testing_libraries:
+                self.logger_testing_libraries.error(
+                    f"Perl executable not found at: {perl_executable}"
+                )
             return False
 
         jdk_executable = os.path.join(self.jdk_path, "bin", "java")
         if not os.path.exists(jdk_executable):
-            self.logger.error(f"Java executable not found at: {jdk_executable}")
+            if self.logger_testing_libraries:
+                self.logger_testing_libraries.error(
+                    f"Java executable not found at: {jdk_executable}"
+                )
             return False
 
         try:
@@ -140,29 +200,41 @@ class LibraryRunner:
                 jdk_executable,
                 "-v",
             ]
-            self.logger.info(f"Running fastqc -v command: {" ".join(command)}")
+            if self.logger_testing_libraries:
+                self.logger_testing_libraries.info(
+                    f"Running fastqc -v command: {" ".join(command)}"
+                )
             # Run fastqc -v command
             result = subprocess.run(command, capture_output=True, text=True, timeout=10)
 
             if result.returncode == 0:
                 # Extract version info from stderr (fastqc -v outputs to stderr)
                 version_output = result.stderr.strip()
-                self.logger.info("FastQC test successful. Version info:")
-                for line in version_output.split("\n"):
-                    if line.strip():
-                        self.logger.info(f"  {line}")
+                if self.logger_testing_libraries:
+                    self.logger_testing_libraries.info(
+                        "FastQC test successful. Version info:"
+                    )
+                    for line in version_output.split("\n"):
+                        if line.strip():
+                            self.logger_testing_libraries.info(f"  {line}")
                 return True
             else:
-                self.logger.error(
-                    f"FastQC test failed. Return code: {result.returncode}"
-                )
-                self.logger.error(f"Error output: {result.stderr}")
+                if self.logger_testing_libraries:
+                    self.logger_testing_libraries.error(
+                        f"FastQC test failed. Return code: {result.returncode}"
+                    )
+                    self.logger_testing_libraries.error(
+                        f"Error output: {result.stderr}"
+                    )
                 return False
         except Exception as e:
-            self.logger.error(f"Error testing FastQC installation: {e}")
+            if self.logger_testing_libraries:
+                self.logger_testing_libraries.error(
+                    f"Error testing FastQC installation: {e}"
+                )
             return False
 
-    def test_jdk_installation(self):
+    def test_jdk_installation(self) -> bool:
         """
         Test if the JDK installation is working by running java -version
         """
@@ -170,7 +242,10 @@ class LibraryRunner:
 
         # Check if java executable exists
         if not os.path.exists(java_executable):
-            self.logger.error(f"Java executable not found at: {java_executable}")
+            if self.logger_testing_libraries:
+                self.logger_testing_libraries.error(
+                    f"Java executable not found at: {java_executable}"
+                )
             return False
 
         try:
@@ -185,19 +260,33 @@ class LibraryRunner:
             if result.returncode == 0:
                 # Extract version info from stderr (java -version outputs to stderr)
                 version_output = result.stderr.strip()
-                self.logger.info("JDK test successful. Version info:")
-                for line in version_output.split("\n"):
-                    if line.strip():
-                        self.logger.info(f"  {line}")
+                if self.logger_testing_libraries:
+                    self.logger_testing_libraries.info(
+                        "JDK test successful. Version info:"
+                    )
+                    for line in version_output.split("\n"):
+                        if line.strip():
+                            self.logger_testing_libraries.info(f"  {line}")
                 return True
             else:
-                self.logger.error(f"JDK test failed. Return code: {result.returncode}")
-                self.logger.error(f"Error output: {result.stderr}")
+                if self.logger_testing_libraries:
+                    self.logger_testing_libraries.error(
+                        f"JDK test failed. Return code: {result.returncode}"
+                    )
+                    self.logger_testing_libraries.error(
+                        f"Error output: {result.stderr}"
+                    )
                 return False
 
         except subprocess.TimeoutExpired:
-            self.logger.error("JDK test timed out after 10 seconds")
+            if self.logger_testing_libraries:
+                self.logger_testing_libraries.error(
+                    "JDK test timed out after 10 seconds"
+                )
             return False
         except Exception as e:
-            self.logger.error(f"Error testing JDK installation: {e}")
+            if self.logger_testing_libraries:
+                self.logger_testing_libraries.error(
+                    f"Error testing JDK installation: {e}"
+                )
             return False
