@@ -1,8 +1,8 @@
 import tkinter as tk
 from tkinter import messagebox
 
-from app.ui.loading_window import LoadingWindow
 from app.ui.main_window import MainWindow
+from app.ui.setup_window import SetupWindow
 
 
 class App(tk.Tk):
@@ -16,7 +16,7 @@ class App(tk.Tk):
             self._present_error_message(str(e))
 
     def _show_loading_screen(self) -> None:
-        self.loading_screen = LoadingWindow(
+        self.loading_screen = SetupWindow(
             parent=self,
             on_success_install_libraries_callback=self._on_success_install_libraries,
             on_error_install_libraries_callback=self._on_error_install_libraries,

@@ -5,11 +5,11 @@ from typing import Callable, Optional
 from app.library.manager import LibraryManager
 from app.logger.config import Logger, LogType
 from app.thread.lambda_runner import LambdaThreadRunner
-from app.ui.utils import WindowUtils
-from app.ui.widget.log_file_monitor import LogFileMonitor
+from app.ui.utils.utils import WindowUtils
+from app.ui.widgets.log_file_monitor import LogFileMonitor
 
 
-class LoadingWindow:
+class SetupWindow:
     def __init__(
         self,
         parent: tk.Tk,

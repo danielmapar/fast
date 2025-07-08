@@ -4,7 +4,7 @@ from typing import Optional
 
 from app.ui.tool_frames import FastPFrame, FastQCFrame, HybPiperFrame
 from app.ui.tool_frames.base_frame import BaseToolFrame
-from app.ui.utils import WindowUtils
+from app.ui.utils.utils import WindowUtils
 
 
 class MainWindow:
