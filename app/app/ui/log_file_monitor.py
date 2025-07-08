@@ -22,25 +22,25 @@ class LogFileMonitor(tk.Frame):
     ) -> None:
         super().__init__(parent, **kwargs)
 
-        self.parent = parent
-        self.current_file_path = file_path
-        self.last_file_size = 0
-        self.monitoring_active = False
-        self.monitor_thread: Optional[threading.Thread] = None
-        self.title_text = title
-        self.content_visible = True  # Track visibility state
+        self._parent = parent
+        self._current_file_path = file_path
+        self._last_file_size = 0
+        self._monitoring_active = False
+        self._monitor_thread: Optional[threading.Thread] = None
+        self._title_text = title
+        self._content_visible = True  # Track visibility state
 
-        self.setup_ui(height, width)
+        self._setup_ui(height, width)
 
         if file_path:
-            self.start_monitoring()
+            self._start_monitoring()
 
-    def setup_ui(self, height: int, width: int) -> None:
+    def _setup_ui(self, height: int, width: int) -> None:
         """Set up the UI components with dark theme"""
         # Configure the frame - initially use parent's background
         parent_bg = (
-            self.parent.cget("bg")
-            if hasattr(self.parent, "cget")
+            self._parent.cget("bg")
+            if hasattr(self._parent, "cget")
             else "SystemButtonFace"
         )
         self.configure(bg=parent_bg)
@@ -52,13 +52,13 @@ class LogFileMonitor(tk.Frame):
         # Create clickable title button
         self.title_button = tk.Button(
             self.title_frame,
-            text=f"▼ {self.title_text}",
+            text=f"▼ {self._title_text}",
             bg="#333333",
             fg="white",
             relief=tk.FLAT,
             font=("Arial", 10, "bold"),
             anchor="w",
-            command=self.toggle_content,
+            command=self._toggle_content,
         )
         self.title_button.pack(fill=tk.X)
 
@@ -93,80 +93,80 @@ class LogFileMonitor(tk.Frame):
         self.text_widget.insert("1.0", "No log file specified...")
         self.text_widget.config(state=tk.DISABLED)  # Make read-only
 
-    def toggle_content(self) -> None:
+    def _toggle_content(self) -> None:
         """Toggle the visibility of the log content"""
-        if self.content_visible:
+        if self._content_visible:
             # Hide content
             self.content_frame.pack_forget()
-            self.title_button.config(text=f"▶ {self.title_text}")
-            self.content_visible = False
+            self.title_button.config(text=f"▶ {self._title_text}")
+            self._content_visible = False
             # Change background to parent's background to avoid black box
             parent_bg = (
-                self.parent.cget("bg")
-                if hasattr(self.parent, "cget")
+                self._parent.cget("bg")
+                if hasattr(self._parent, "cget")
                 else "SystemButtonFace"
             )
             self.configure(bg=parent_bg)
         else:
             # Show content
             self.content_frame.pack(fill=tk.BOTH, expand=True)
-            self.title_button.config(text=f"▼ {self.title_text}")
-            self.content_visible = True
+            self.title_button.config(text=f"▼ {self._title_text}")
+            self._content_visible = True
             # Restore black background when content is visible
             self.configure(bg="black")
 
-    def set_title(self, title: str) -> None:
+    def _set_title(self, title: str) -> None:
         """Update the title text"""
-        self.title_text = title
-        arrow = "▼" if self.content_visible else "▶"
-        self.title_button.config(text=f"{arrow} {self.title_text}")
+        self._title_text = title
+        arrow = "▼" if self._content_visible else "▶"
+        self.title_button.config(text=f"{arrow} {self._title_text}")
 
     def set_file_path(self, file_path: str) -> None:
         """Change the file being monitored"""
         # Stop current monitoring
-        self.stop_monitoring()
+        self._stop_monitoring()
 
         # Update file path and reset
-        self.current_file_path = file_path
-        self.last_file_size = 0
+        self._current_file_path = file_path
+        self._last_file_size = 0
 
         # Update title to show file name if available
         if file_path:
             filename = os.path.basename(file_path)
-            self.set_title(f"Log Monitor - {filename}")
+            self._set_title(f"Log Monitor - {filename}")
         else:
-            self.set_title("Log Monitor")
+            self._set_title("Log Monitor")
 
         # Clear the display
-        self.clear_display()
+        self._clear_display()
 
         # Start monitoring the new file
         if file_path:
-            self.start_monitoring()
+            self._start_monitoring()
         else:
             self.text_widget.config(state=tk.NORMAL)
             self.text_widget.insert("1.0", "No log file specified...")
             self.text_widget.config(state=tk.DISABLED)
 
-    def start_monitoring(self) -> None:
+    def _start_monitoring(self) -> None:
         """Start monitoring the current file for changes"""
-        if not self.current_file_path or self.monitoring_active:
+        if not self._current_file_path or self._monitoring_active:
             return
 
-        self.monitoring_active = True
+        self._monitoring_active = True
 
         # Load existing content if file exists
-        if os.path.exists(self.current_file_path):
+        if os.path.exists(self._current_file_path):
             try:
-                with open(self.current_file_path, "r", encoding="utf-8") as f:
+                with open(self._current_file_path, "r", encoding="utf-8") as f:
                     content = f.read()
                     if content.strip():
 
                         def update_func() -> None:
                             self._update_display(content, replace=True)
 
-                        self.parent.after(0, update_func)
-                    self.last_file_size = len(content.encode("utf-8"))
+                        self._parent.after(0, update_func)
+                    self._last_file_size = len(content.encode("utf-8"))
             except Exception as e:
                 error_str = str(e)
 
@@ -175,19 +175,19 @@ class LogFileMonitor(tk.Frame):
                         f"Error reading file: {error_str}\n", replace=True
                     )
 
-                self.parent.after(0, error_func)
+                self._parent.after(0, error_func)
 
         # Start monitoring thread
-        self.monitor_thread = threading.Thread(target=self._monitor_file, daemon=True)
-        self.monitor_thread.start()
+        self._monitor_thread = threading.Thread(target=self._monitor_file, daemon=True)
+        self._monitor_thread.start()
 
-    def stop_monitoring(self) -> None:
+    def _stop_monitoring(self) -> None:
         """Stop monitoring the current file"""
-        self.monitoring_active = False
-        if self.monitor_thread and self.monitor_thread.is_alive():
-            self.monitor_thread.join(timeout=1.0)
+        self._monitoring_active = False
+        if self._monitor_thread and self._monitor_thread.is_alive():
+            self._monitor_thread.join(timeout=1.0)
 
-    def clear_display(self) -> None:
+    def _clear_display(self) -> None:
         """Clear the text display"""
         self.text_widget.config(state=tk.NORMAL)
         self.text_widget.delete("1.0", tk.END)
@@ -195,15 +195,15 @@ class LogFileMonitor(tk.Frame):
 
     def _monitor_file(self) -> None:
         """Background thread function to monitor file changes"""
-        while self.monitoring_active:
+        while self._monitoring_active:
             try:
-                if self.current_file_path and os.path.exists(self.current_file_path):
-                    current_size = os.path.getsize(self.current_file_path)
+                if self._current_file_path and os.path.exists(self._current_file_path):
+                    current_size = os.path.getsize(self._current_file_path)
 
-                    if current_size > self.last_file_size:
+                    if current_size > self._last_file_size:
                         # File has grown, read the new content
-                        with open(self.current_file_path, "r", encoding="utf-8") as f:
-                            f.seek(self.last_file_size)
+                        with open(self._current_file_path, "r", encoding="utf-8") as f:
+                            f.seek(self._last_file_size)
                             new_content = f.read()
 
                             if new_content.strip():
@@ -211,17 +211,17 @@ class LogFileMonitor(tk.Frame):
                                 def update_func(content=new_content) -> None:
                                     self._update_display(content)
 
-                                self.parent.after(0, update_func)
+                                self._parent.after(0, update_func)
 
-                            self.last_file_size = current_size
-                    elif current_size < self.last_file_size:
+                            self._last_file_size = current_size
+                    elif current_size < self._last_file_size:
                         # File was truncated or recreated, reload from beginning
-                        self.last_file_size = 0
+                        self._last_file_size = 0
 
                         def clear_func() -> None:
-                            self.clear_display()
+                            self._clear_display()
 
-                        self.parent.after(0, clear_func)
+                        self._parent.after(0, clear_func)
 
                 time.sleep(0.5)  # Check every 500ms
 
@@ -231,7 +231,7 @@ class LogFileMonitor(tk.Frame):
                 def error_func(error_message=error_str) -> None:
                     self._update_display(f"Error monitoring file: {error_message}\n")
 
-                self.parent.after(0, error_func)
+                self._parent.after(0, error_func)
                 time.sleep(1)
 
     def _update_display(self, content: str, replace: bool = False) -> None:
@@ -261,5 +261,5 @@ class LogFileMonitor(tk.Frame):
 
     def destroy(self) -> None:
         """Clean up when destroying the widget"""
-        self.stop_monitoring()
+        self._stop_monitoring()
         super().destroy()
