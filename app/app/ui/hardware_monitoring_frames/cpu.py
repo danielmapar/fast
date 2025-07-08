@@ -20,6 +20,7 @@ class CPUFrame(BaseHardwareMonitoringFrame):
         self._widgets: Dict[str, Any] = {}
         self._per_core_bars: List[ttk.Progressbar] = []
         self._per_core_labels: List[tk.Label] = []
+        self.main_container: tk.Frame = tk.Frame()
 
         super().__init__(notebook, "CPU")
         self._start_updates()
@@ -27,23 +28,23 @@ class CPUFrame(BaseHardwareMonitoringFrame):
     def setup_frame(self) -> None:
         """Setup the CPU monitoring interface with multiple statistics"""
         # Get the scrollable container from the base class
-        main_container = tk.Frame(self.get_scrollable_container())
-        main_container.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        self.main_container = tk.Frame(self.get_scrollable_container())
+        self.main_container.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
 
         # Title
-        title_label = tk.Label(
-            main_container, text="CPU Monitoring", font=("Arial", 16, "bold")
-        )
-        title_label.pack(pady=(0, 15))
+        # title_label = tk.Label(
+        #     self.main_container, text="CPU Monitoring", font=("Arial", 16, "bold")
+        # )
+        # title_label.pack(pady=(0, 15))
 
         # Create sections
-        self._create_overall_usage_section(main_container)
-        self._create_per_core_section(main_container)
-        self._create_top_processes_section(main_container)
-        self._create_cpu_times_section(main_container)
-        self._create_cpu_info_section(main_container)
-        self._create_frequency_section(main_container)
-        self._create_cpu_stats_section(main_container)
+        self._create_overall_usage_section()
+        self._create_per_core_section()
+        self._create_top_processes_section()
+        self._create_cpu_times_section()
+        self._create_cpu_info_section()
+        self._create_frequency_section()
+        self._create_cpu_stats_section()
 
         # Initial update
         self._update_cpu_stats()
@@ -62,10 +63,10 @@ class CPUFrame(BaseHardwareMonitoringFrame):
         for progress_bar in self._per_core_bars:
             progress_bar.config(length=core_length)
 
-    def _create_overall_usage_section(self, parent: tk.Widget) -> None:
+    def _create_overall_usage_section(self) -> None:
         """Create overall CPU usage section"""
         frame = tk.LabelFrame(
-            parent, text="Overall CPU Usage", font=("Arial", 12, "bold")
+            self.main_container, text="Overall CPU Usage", font=("Arial", 12, "bold")
         )
         frame.pack(fill=tk.X, pady=(0, 10))
 
@@ -98,10 +99,10 @@ class CPUFrame(BaseHardwareMonitoringFrame):
         )
         self._widgets[key].pack(side=tk.RIGHT)
 
-    def _create_cpu_info_section(self, parent: tk.Widget) -> None:
+    def _create_cpu_info_section(self) -> None:
         """Create CPU information section"""
         frame = tk.LabelFrame(
-            parent, text="CPU Information", font=("Arial", 12, "bold")
+            self.main_container, text="CPU Information", font=("Arial", 12, "bold")
         )
         frame.pack(fill=tk.X, pady=(0, 10))
 
@@ -112,10 +113,10 @@ class CPUFrame(BaseHardwareMonitoringFrame):
         self._create_info_row(info_frame, "Logical CPUs", "logical_cpus")
         self._create_info_row(info_frame, "Physical Cores", "physical_cpus")
 
-    def _create_per_core_section(self, parent: tk.Widget) -> None:
+    def _create_per_core_section(self) -> None:
         """Create per-core CPU usage section"""
         frame = tk.LabelFrame(
-            parent, text="Per-Core CPU Usage", font=("Arial", 12, "bold")
+            self.main_container, text="Per-Core CPU Usage", font=("Arial", 12, "bold")
         )
         frame.pack(fill=tk.X, pady=(0, 10))
 
@@ -123,9 +124,11 @@ class CPUFrame(BaseHardwareMonitoringFrame):
         self._widgets["per_core_container"] = tk.Frame(frame)
         self._widgets["per_core_container"].pack(fill=tk.X, padx=10, pady=10)
 
-    def _create_cpu_times_section(self, parent: tk.Widget) -> None:
+    def _create_cpu_times_section(self) -> None:
         """Create CPU times section"""
-        frame = tk.LabelFrame(parent, text="CPU Times", font=("Arial", 12, "bold"))
+        frame = tk.LabelFrame(
+            self.main_container, text="CPU Times", font=("Arial", 12, "bold")
+        )
         frame.pack(fill=tk.X, pady=(0, 10))
 
         times_frame = tk.Frame(frame)
@@ -137,9 +140,11 @@ class CPUFrame(BaseHardwareMonitoringFrame):
                 times_frame, time_type, f"cpu_time_{time_type.lower()}", "0.0%"
             )
 
-    def _create_frequency_section(self, parent: tk.Widget) -> None:
+    def _create_frequency_section(self) -> None:
         """Create CPU frequency section"""
-        frame = tk.LabelFrame(parent, text="CPU Frequency", font=("Arial", 12, "bold"))
+        frame = tk.LabelFrame(
+            self.main_container, text="CPU Frequency", font=("Arial", 12, "bold")
+        )
         frame.pack(fill=tk.X, pady=(0, 10))
 
         freq_frame = tk.Frame(frame)
@@ -153,9 +158,11 @@ class CPUFrame(BaseHardwareMonitoringFrame):
         ]:
             self._create_info_row(freq_frame, freq_type[0], freq_type[1], "0 MHz")
 
-    def _create_cpu_stats_section(self, parent: tk.Widget) -> None:
+    def _create_cpu_stats_section(self) -> None:
         """Create CPU statistics section"""
-        frame = tk.LabelFrame(parent, text="CPU Statistics", font=("Arial", 12, "bold"))
+        frame = tk.LabelFrame(
+            self.main_container, text="CPU Statistics", font=("Arial", 12, "bold")
+        )
         frame.pack(fill=tk.X, pady=(0, 10))
 
         stats_frame = tk.Frame(frame)
@@ -168,10 +175,10 @@ class CPUFrame(BaseHardwareMonitoringFrame):
                 stats_frame, stat, f'cpu_stat_{stat.lower().replace(" ", "_")}'
             )
 
-    def _create_top_processes_section(self, parent: tk.Widget) -> None:
+    def _create_top_processes_section(self) -> None:
         """Create top CPU consuming processes section"""
         frame = tk.LabelFrame(
-            parent, text="Top CPU Processes", font=("Arial", 12, "bold")
+            self.main_container, text="Top CPU Processes", font=("Arial", 12, "bold")
         )
         frame.pack(fill=tk.X, pady=(0, 10))
 
