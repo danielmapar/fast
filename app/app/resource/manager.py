@@ -18,5 +18,7 @@ def get_resource_path(relative_path):
 def open_image(relative_path):
     """Open image from resource path"""
     image_path = get_resource_path(relative_path)
+    print("image_path")
+    print(image_path)
     image = Image.open(image_path)
     return image

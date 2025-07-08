@@ -51,13 +51,15 @@ class LibraryManager:
     def are_libraries_installed(self):
         return len(os.listdir(self.download_dir)) != 0
 
-    def setup_and_test_libraries(self):
+    def install_and_test_libraries(self):
         try:
-            self.library_downloader.setup_all_libraries()
+            self.library_downloader.install_all_libraries()
         except Exception as e:
             raise Exception(f"Error while setting up libraries: {e}")
 
         try:
             self.library_runner.test_all_libraries()
         except Exception as e:
+            # Remove all libraries for a possible re-install
+            self.library_downloader.remove_all_libraries()
             raise Exception(f"Error while testing library installations: {e}")

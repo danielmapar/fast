@@ -88,7 +88,7 @@ class LoadingWindow:
 
     def start_setup(self):
         self.setup_thread = LambdaThreadRunner(
-            target_function=lambda: LibraryManager().setup_and_test_libraries(),
+            target_function=lambda: LibraryManager().install_and_test_libraries(),
             on_success=lambda result: self.parent.after(0, self.on_setup_success),
             on_error=lambda error: self.parent.after(
                 0, lambda: self.on_setup_error(error)

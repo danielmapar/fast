@@ -10,24 +10,18 @@ import zipfile
 
 class LibraryDownloader:
     def __init__(
-        self,
-        download_dir,
-        jdk_path,
-        fastqc_path,
-        perl_path,
-        fastp_path,
-        conda_path,
-        remove_existing_files=True,
+        self, download_dir, jdk_path, fastqc_path, perl_path, fastp_path, conda_path
     ):
 
         self.logger = logging.getLogger()
 
         self.download_dir = download_dir
 
-        self.logger.info("Creating download directory at: %s", self.download_dir)
+        # Create download directory if it doesn't exist
         os.makedirs(self.download_dir, exist_ok=True)
 
-        if os.environ.get("FORCE_LIBRARY_INSTALL") == "true":
+        # Remove all libraries if FORCE_FRESH_LIBRARY_INSTALL is true
+        if os.environ.get("FORCE_FRESH_LIBRARY_INSTALL") == "true":
             self.remove_all_libraries()
 
         # FastQC dependencies
@@ -52,10 +46,14 @@ class LibraryDownloader:
             elif os.path.isdir(os.path.join(self.download_dir, file)):
                 shutil.rmtree(os.path.join(self.download_dir, file))
 
-    def setup_all_libraries(self) -> bool:
-        self.logger.info("------------------------------------------")
-        self.logger.info("------- Setting up all libraries -------")
-        self.logger.info("------------------------------------------")
+    def install_all_libraries(self) -> bool:
+
+        if os.environ.get("IGNORE_LIBRARY_INSTALL") == "true":
+            return True
+
+        self.logger.info("--------------------------------------------")
+        self.logger.info("------- Installing all libraries -----------")
+        self.logger.info("--------------------------------------------")
 
         if not self.download_and_extract_corretto_jdk():
             raise Exception("Failed to download and extract Amazon Corretto JDK")
@@ -70,9 +68,9 @@ class LibraryDownloader:
         if not self.download_and_intall_hybpiper():
             raise Exception("Failed to download and install HybPiper")
 
-        self.logger.info("------------------------------------------")
-        self.logger.info("------- Libraries setup successfully -------")
-        self.logger.info("------------------------------------------")
+        self.logger.info("------------------------------------------------")
+        self.logger.info("------- Libraries installed successfully -------")
+        self.logger.info("------------------------------------------------")
 
         return True
 

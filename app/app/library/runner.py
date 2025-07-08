@@ -12,9 +12,12 @@ class LibraryRunner:
         self.conda_path = conda_path
         self.logger = logging.getLogger()
 
-    def test_all_libraries(self):
+    def test_all_libraries(self) -> bool:
+        if os.environ.get("IGNORE_LIBRARY_TEST") == "true":
+            return True
+
         self.logger.info("------------------------------------------")
-        self.logger.info("------- Testing all libraries -------")
+        self.logger.info("---------- Testing all libraries ---------")
         self.logger.info("------------------------------------------")
 
         if not self.test_jdk_installation():
@@ -28,9 +31,9 @@ class LibraryRunner:
         if not self.test_hybpiper_installation():
             raise Exception("Failed to test HybPiper installation")
 
-        self.logger.info("------------------------------------------")
+        self.logger.info("-------------------------------------------------")
         self.logger.info("------- All libraries tested successfully -------")
-        self.logger.info("------------------------------------------")
+        self.logger.info("-------------------------------------------------")
 
         return True
 

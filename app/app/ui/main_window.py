@@ -1,5 +1,9 @@
+import tkinter as tk
 import tkinter.ttk as ttk
 
+from PIL import Image, ImageTk
+
+from app.resource.manager import open_image
 from app.ui.styles import AppStyles
 from app.ui.tool_frames import FastPFrame, FastQCFrame, HybPiperFrame
 
@@ -7,16 +11,34 @@ from app.ui.tool_frames import FastPFrame, FastQCFrame, HybPiperFrame
 class MainWindow:
     def __init__(self, parent):
         self.parent = parent
+
+        # Setup window
         self.setup_window()
+
+        # Setup styling
         self.setup_styling()
+
+        # Setup logo
+        self.setup_logo()
+
+        # Create tabs
         self.create_tabs()
+
+        # Center window
+        self.center_window()
+
+    def setup_logo(self):
+        logo_image = open_image("images/logo.png")
+        # Resize logo to fit nicely in the window
+        logo_image = logo_image.resize((80, 80), Image.Resampling.LANCZOS)
+        self.logo_photo = ImageTk.PhotoImage(logo_image)
+
+        logo_label = tk.Label(self.parent, image=self.logo_photo, bg="#FFFFFF")
+        logo_label.pack(pady=(10, 5))
 
     def setup_window(self):
         self.parent.title("Fast App")
-        self.parent.minsize(1200, 800)
-        self.parent.maxsize(1200, 800)
         self.parent.configure(bg="#FFFFFF")
-        self.center_window()
 
     def setup_styling(self):
         self.style = AppStyles.setup_notebook_style()
