@@ -61,5 +61,5 @@ class MainWindow:
         # Create hardware monitoring frames
         self._cpu_frame = CPUFrame(self._hardware_monitoring_notebook)
         self._memory_frame = MemoryFrame(self._hardware_monitoring_notebook)
-        self._gpu_frame = GPUFrame(self._hardware_monitoring_notebook)
         self._hard_drive_frame = HardDriveFrame(self._hardware_monitoring_notebook)
+        self._gpu_frame = GPUFrame(self._hardware_monitoring_notebook)
