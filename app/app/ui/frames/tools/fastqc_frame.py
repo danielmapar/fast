@@ -4,6 +4,8 @@ import tkinter.ttk as ttk
 from tkinter import filedialog, messagebox
 from typing import List, Optional, override
 
+import psutil
+
 from app.library.manager import LibraryManager
 from app.thread.lambda_runner import LambdaThreadRunner
 from app.ui.frames.base_frame import BaseFrame
@@ -13,11 +15,14 @@ class FastQCFrame(BaseFrame):
     def __init__(self, notebook: ttk.Notebook) -> None:
         self._library_manager = LibraryManager()
 
+        # Track focusable widgets
+        self._focusable_widgets: List[tk.Widget] = []
+
         # UI Variables
         self.input_files: List[str] = []
         self.output_dir = tk.StringVar()
         self.format_var = tk.StringVar(value="auto")
-        self.threads_var = tk.StringVar(value="1")
+        self.threads_var = tk.StringVar(value=str(self._detect_cpu_cores()))
         self.kmers_var = tk.StringVar(value="5")
         self.extract_var = tk.BooleanVar(value=True)
         self.nogroup_var = tk.BooleanVar(value=False)
@@ -33,19 +38,54 @@ class FastQCFrame(BaseFrame):
 
         super().__init__(notebook, "FastQC")
 
+    def _remove_focus(self, event=None):
+        """Remove focus from any focused widget when clicking on non-input areas"""
+        if not event:
+            return
+
+        clicked_widget = event.widget
+        widget_class = clicked_widget.winfo_class()
+
+        # List of widgets that should keep focus when clicked
+        input_widgets = ["Entry", "Spinbox", "TCombobox", "Listbox", "Text", "Button"]
+
+        if widget_class not in input_widgets:
+            # Remove focus by setting it to the main frame
+            self._frame.focus_set()
+            return "break"  # Prevent event propagation
+
+    def _bind_focus_removal(self, widget):
+        """Bind focus removal to a widget and its children"""
+        widget.bind("<Button-1>", self._remove_focus)
+
+        # Recursively bind to all children
+        for child in widget.winfo_children():
+            child_class = child.winfo_class()
+            # Don't bind to input widgets as they need to maintain focus
+            if child_class not in [
+                "Entry",
+                "Spinbox",
+                "TCombobox",
+                "Listbox",
+                "Text",
+                "Button",
+            ]:
+                self._bind_focus_removal(child)
+
     @override
     def setup_frame(self) -> None:
         """Setup the FastQC frame UI"""
+        container = self.get_scrollable_container()
+        if not container:
+            return
+
         # Main content with padding
-        main_frame = tk.Frame(self.get_scrollable_container())
+        main_frame = tk.Frame(container)
         main_frame.pack(fill="both", expand=True, padx=20, pady=15)
 
         # Title
-        title_label = tk.Label(
-            main_frame,
-            text="FastQC - Quality Control Analysis",
-            font=("Arial", 12, "bold"),
-        )
+        title_text = "FastQC - Quality Control Analysis"
+        title_label = tk.Label(main_frame, text=title_text, font=("Arial", 12, "bold"))
         title_label.pack(pady=(0, 20))
 
         # Create all sections
@@ -54,6 +94,28 @@ class FastQCFrame(BaseFrame):
         self._create_options_section(main_frame)
         self._create_advanced_options_section(main_frame)
         self._create_run_section(main_frame)
+
+        # Bind focus removal to all non-input widgets
+        self._bind_focus_removal(main_frame)
+        self._bind_focus_removal(container)
+
+    def _detect_cpu_cores(self) -> int:
+        """Detect the number of available CPU cores"""
+        try:
+            # Use psutil for more accurate detection
+            logical_cores = psutil.cpu_count(logical=True)
+            if logical_cores:
+                return logical_cores
+        except Exception:
+            pass
+
+        # Fallback to os.cpu_count()
+        cores = os.cpu_count()
+        if cores:
+            return cores
+
+        # Ultimate fallback
+        return 2
 
     def _create_input_files_section(self, parent: tk.Widget) -> None:
         """Create the input files selection section"""
@@ -136,13 +198,15 @@ class FastQCFrame(BaseFrame):
             side="left"
         )
 
-        tk.Entry(dir_frame, textvariable=self.output_dir, width=50).pack(
-            side="left", padx=(10, 10), fill="x", expand=True
-        )
-
+        # Pack the Browse button FIRST to reserve its space
         tk.Button(
             dir_frame, text="Browse", command=self._browse_output_dir, padx=15
         ).pack(side="right")
+
+        # Then pack the Entry to fill remaining space
+        tk.Entry(dir_frame, textvariable=self.output_dir).pack(
+            side="left", padx=(10, 10), fill="x", expand=True
+        )
 
     def _create_options_section(self, parent: tk.Widget) -> None:
         """Create the basic options section"""
