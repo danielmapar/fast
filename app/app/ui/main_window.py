@@ -2,13 +2,14 @@ import tkinter as tk
 import tkinter.ttk as ttk
 from typing import Optional
 
-from app.ui.hardware_monitoring_frames.base_frame import BaseHardwareMonitoringFrame
-from app.ui.hardware_monitoring_frames.cpu import CPUFrame
-from app.ui.hardware_monitoring_frames.gpu import GPUFrame
-from app.ui.hardware_monitoring_frames.harddrive import HardDriveFrame
-from app.ui.hardware_monitoring_frames.memory import MemoryFrame
-from app.ui.tool_frames import FastPFrame, FastQCFrame, HybPiperFrame
-from app.ui.tool_frames.base_frame import BaseToolFrame
+from app.ui.frames.base_frame import BaseFrame
+from app.ui.frames.hardware_monitoring.cpu import CPUFrame
+from app.ui.frames.hardware_monitoring.gpu import GPUFrame
+from app.ui.frames.hardware_monitoring.harddrive import HardDriveFrame
+from app.ui.frames.hardware_monitoring.memory import MemoryFrame
+from app.ui.frames.tools.fastp_frame import FastPFrame
+from app.ui.frames.tools.fastqc_frame import FastQCFrame
+from app.ui.frames.tools.hybpiper_frame import HybPiperFrame
 from app.ui.utils.utils import WindowUtils
 
 
@@ -18,17 +19,17 @@ class MainWindow:
 
         # Tools UI elements
         self._tools_notebook: Optional[ttk.Notebook] = None
-        self._fastqc_frame: Optional[BaseToolFrame] = None
-        self._fastp_frame: Optional[BaseToolFrame] = None
-        self._hybpiper_frame: Optional[BaseToolFrame] = None
+        self._fastqc_frame: Optional[BaseFrame] = None
+        self._fastp_frame: Optional[BaseFrame] = None
+        self._hybpiper_frame: Optional[BaseFrame] = None
 
         # Hardware monitoring UI elements
         self._hardware_monitoring_window: Optional[tk.Toplevel] = None
         self._hardware_monitoring_notebook: Optional[ttk.Notebook] = None
-        self._cpu_frame: Optional[BaseHardwareMonitoringFrame] = None
-        self._memory_frame: Optional[BaseHardwareMonitoringFrame] = None
-        self._gpu_frame: Optional[BaseHardwareMonitoringFrame] = None
-        self._hard_drive_frame: Optional[BaseHardwareMonitoringFrame] = None
+        self._cpu_frame: Optional[BaseFrame] = None
+        self._memory_frame: Optional[BaseFrame] = None
+        self._gpu_frame: Optional[BaseFrame] = None
+        self._hard_drive_frame: Optional[BaseFrame] = None
 
         # Setup window
         self._setup_window()

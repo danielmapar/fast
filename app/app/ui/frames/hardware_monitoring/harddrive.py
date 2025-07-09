@@ -6,10 +6,10 @@ from typing import Any, Dict, List, Optional, override
 import psutil
 
 from app.logger.config import Logger, LogType
-from app.ui.hardware_monitoring_frames.base_frame import BaseHardwareMonitoringFrame
+from app.ui.frames.base_frame import BaseFrame
 
 
-class HardDriveFrame(BaseHardwareMonitoringFrame):
+class HardDriveFrame(BaseFrame):
     """Hardware monitoring frame for disk/hard drive statistics."""
 
     # Configuration constants

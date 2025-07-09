@@ -1,10 +1,10 @@
 import tkinter as tk
 import tkinter.ttk as ttk
 
-from app.ui.tool_frames.base_frame import BaseToolFrame
+from app.ui.frames.base_frame import BaseFrame
 
 
-class HybPiperFrame(BaseToolFrame):
+class HybPiperFrame(BaseFrame):
     def __init__(self, notebook: ttk.Notebook) -> None:
         super().__init__(notebook, "HybPiper")
 

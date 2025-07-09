@@ -8,7 +8,7 @@ from typing import Any, Dict, List, Optional, override
 import pynvml
 
 from app.logger.config import Logger, LogType
-from app.ui.hardware_monitoring_frames.base_frame import BaseHardwareMonitoringFrame
+from app.ui.frames.base_frame import BaseFrame
 
 
 @dataclass
@@ -43,7 +43,7 @@ class GPUMetrics:
         )
 
 
-class GPUFrame(BaseHardwareMonitoringFrame):
+class GPUFrame(BaseFrame):
     # Constants
     UPDATE_INTERVAL = 1000
     BYTES_TO_GB = 1024**3

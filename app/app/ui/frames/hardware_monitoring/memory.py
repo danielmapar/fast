@@ -7,7 +7,7 @@ from typing import Any, Dict, List, Optional, Union, override
 import psutil
 
 from app.logger.config import Logger, LogType
-from app.ui.hardware_monitoring_frames.base_frame import BaseHardwareMonitoringFrame
+from app.ui.frames.base_frame import BaseFrame
 
 
 @dataclass
@@ -32,7 +32,7 @@ class ProcessInfo:
     status: str
 
 
-class MemoryFrame(BaseHardwareMonitoringFrame):
+class MemoryFrame(BaseFrame):
     """Memory monitoring frame with comprehensive memory statistics display."""
 
     # Configuration constants

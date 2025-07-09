@@ -6,7 +6,7 @@ import tkinter.ttk as ttk
 from typing import Any, Dict, List, Optional
 
 
-class BaseHardwareMonitoringFrame:
+class BaseFrame:
     def __init__(self, notebook: ttk.Notebook, tab_name: str) -> None:
         self._notebook = notebook
         self._frame = ttk.Frame(self._notebook)
