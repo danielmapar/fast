@@ -36,19 +36,15 @@ class FastQCFrame(BaseFrame):
     @override
     def setup_frame(self) -> None:
         """Setup the FastQC frame UI"""
-        container = self.get_scrollable_container()
-        if not container:
-            return
-
         # Main content with padding
-        main_frame = tk.Frame(container)
+        main_frame = tk.Frame(self.get_scrollable_container())
         main_frame.pack(fill="both", expand=True, padx=20, pady=15)
 
         # Title
         title_label = tk.Label(
             main_frame,
             text="FastQC - Quality Control Analysis",
-            font=("Arial", 14, "bold"),
+            font=("Arial", 12, "bold"),
         )
         title_label.pack(pady=(0, 20))
 
