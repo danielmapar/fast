@@ -266,7 +266,7 @@ class LogFileMonitor(tk.Frame):
             self._text_widget.config(state=tk.DISABLED)
 
         except Exception as e:
-            print(f"Error updating display: {e}")
+            raise Exception(f"Error updating display: {e}")
 
     def destroy(self) -> None:
         """Clean up when destroying the widget"""

@@ -9,6 +9,10 @@ class LogType(Enum):
     INSTALLING_LIBRARIES = "installing_libraries"
     TESTING_LIBRARIES = "testing_libraries"
     THREAD_RUNNER = "thread_runner"
+    CPU_MONITORING = "cpu_monitoring"
+    MEMORY_MONITORING = "memory_monitoring"
+    HARDDRIVE_MONITORING = "harddrive_monitoring"
+    GPU_MONITORING = "gpu_monitoring"
 
 
 class Logger:
@@ -43,6 +47,18 @@ class Logger:
             ),
             LogType.THREAD_RUNNER.value: self._create_logger(
                 LogType.THREAD_RUNNER.value
+            ),
+            LogType.CPU_MONITORING.value: self._create_logger(
+                LogType.CPU_MONITORING.value
+            ),
+            LogType.MEMORY_MONITORING.value: self._create_logger(
+                LogType.MEMORY_MONITORING.value
+            ),
+            LogType.HARDDRIVE_MONITORING.value: self._create_logger(
+                LogType.HARDDRIVE_MONITORING.value
+            ),
+            LogType.GPU_MONITORING.value: self._create_logger(
+                LogType.GPU_MONITORING.value
             ),
         }
 

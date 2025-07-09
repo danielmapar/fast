@@ -1,405 +1,508 @@
+import platform
 import tkinter as tk
 import tkinter.ttk as ttk
-from typing import Any, Dict, List
+from dataclasses import dataclass
+from typing import Any, Dict, List, Optional, Union, override
 
 import psutil
 
+from app.logger.config import Logger, LogType
 from app.ui.hardware_monitoring_frames.base_frame import BaseHardwareMonitoringFrame
 
 
+@dataclass
+class MemoryStats:
+    """Data container for memory statistics."""
+
+    total: float
+    available: float
+    used: float
+    free: float
+    percent: float
+
+
+@dataclass
+class ProcessInfo:
+    """Data container for process information."""
+
+    pid: int
+    name: str
+    memory_percent: float
+    memory_mb: float
+    status: str
+
+
 class MemoryFrame(BaseHardwareMonitoringFrame):
-    # Constants
-    UPDATE_INTERVAL = 1000  # milliseconds
+    """Memory monitoring frame with comprehensive memory statistics display."""
+
+    # Configuration constants
+    UPDATE_INTERVAL = 1000
     PROGRESS_BAR_LENGTH = 200
-    TREE_HEIGHT = 8
+    PROCESS_TABLE_HEIGHT = 8
     MAX_PROCESS_NAME_LENGTH = 20
     TOP_PROCESS_COUNT = 10
     BYTES_TO_GB = 1024**3
 
-    # Color thresholds
-    WARNING_THRESHOLD = 50
-    CRITICAL_THRESHOLD = 80
+    # UI color thresholds
+    USAGE_COLORS = {
+        "low": "green",  # < 50%
+        "medium": "orange",  # 50-80%
+        "high": "red",  # > 80%
+    }
 
     def __init__(self, notebook: ttk.Notebook) -> None:
-        self._update_interval = self.UPDATE_INTERVAL
+        self.logger = Logger().get_logger(LogType.MEMORY_MONITORING)
         self._widgets: Dict[str, Any] = {}
-        self.main_container: tk.Frame = tk.Frame()
+        self._previous_values: Dict[str, Any] = {}
+        self._swap_available = False
+
+        # Platform-specific optimizations
+        self._is_windows = platform.system() == "Windows"
+        self._is_linux = platform.system() == "Linux"
+        self._is_macos = platform.system() == "Darwin"
+        self.UPDATE_INTERVAL = (
+            self.UPDATE_INTERVAL * 2 if self._is_windows else self.UPDATE_INTERVAL
+        )
 
         super().__init__(notebook, "Memory")
-        self._start_updates()
 
+    @override
     def setup_frame(self) -> None:
-        """Setup the Memory monitoring interface with comprehensive statistics"""
-        # Get the scrollable container from the base class
+        """Initialize the memory monitoring interface."""
         self.main_container = tk.Frame(self.get_scrollable_container())
         self.main_container.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
 
-        # Create sections
-        self._create_overall_memory_section()
-        self._create_top_processes_section()
+        self._check_swap_availability()
+        self._create_memory_overview_section()
+        self._create_process_table_section()
         self._create_virtual_memory_section()
         self._create_swap_memory_section()
-        self._create_memory_stats_section()
 
-        # Initial update
-        self._update_memory_stats()
+        self.start_threaded_updates(self.UPDATE_INTERVAL)
 
+    @override
+    def _update_ui_with_data(self, data: Dict[str, Any]) -> None:
+        """Update UI with collected memory data."""
+        if not data:
+            return
+
+        try:
+            self._update_memory_stats(data.get("virtual_memory"))
+            self._update_swap_stats(data.get("swap_memory"))
+            self._update_process_table(data.get("top_processes", []))
+        except Exception as e:
+            self.logger.error(f"Error updating memory UI: {e}")
+
+    @override
     def _resize_widgets(self, canvas_width: int) -> None:
-        """Override base class method to handle Memory-specific widget resizing"""
-        # Calculate progress bar length based on canvas width
+        """Resize progress bars based on available width."""
         progress_length = max(150, min(300, canvas_width - 200))
 
-        # Resize progress bars
-        for key in ["memory_usage_bar", "swap_usage_bar"]:
-            if key in self._widgets:
-                self._widgets[key].config(length=progress_length)
+        for bar_key in ["memory_usage_bar", "swap_usage_bar"]:
+            if bar_key in self._widgets:
+                self._widgets[bar_key].config(length=progress_length)
 
-    def _create_overall_memory_section(self) -> None:
-        """Create overall memory usage section"""
-        frame = tk.LabelFrame(
-            self.main_container, text="Overall Memory Usage", font=("Arial", 12, "bold")
-        )
-        frame.pack(fill=tk.X, pady=(0, 10))
+    @override
+    def _collect_data_threaded(self) -> Optional[Dict[str, Any]]:
+        """Collect memory data in background thread."""
+        try:
+            data = {
+                "virtual_memory": psutil.virtual_memory(),
+                "top_processes": self._get_top_processes(),
+            }
 
-        # Memory usage percentage
-        usage_frame = tk.Frame(frame)
-        usage_frame.pack(fill=tk.X, padx=10, pady=10)
+            # Always try to collect swap data
+            try:
+                data["swap_memory"] = psutil.swap_memory()
+            except Exception as e:
+                self.logger.warning(f"Warning: Could not collect swap data: {e}")
+                data["swap_memory"] = None
 
-        tk.Label(usage_frame, text="Memory Usage:", font=("Arial", 11)).pack(
-            side=tk.LEFT
-        )
+            return data
+        except Exception as e:
+            self.logger.error(f"Error collecting memory data: {e}")
+            return None
 
-        self._widgets["memory_usage_label"] = tk.Label(
-            usage_frame, text="0.0%", font=("Arial", 11, "bold"), fg="blue"
-        )
-        self._widgets["memory_usage_label"].pack(side=tk.RIGHT)
+    def _check_swap_availability(self) -> None:
+        """Check swap availability at startup."""
+        try:
+            swap_info = psutil.swap_memory()
+            self._swap_available = swap_info.total > 0
+        except Exception:
+            self._swap_available = False
 
-        # Progress bar for visual representation
-        self._widgets["memory_usage_bar"] = ttk.Progressbar(
-            frame, mode="determinate", length=300, maximum=100
-        )
-        self._widgets["memory_usage_bar"].pack(fill=tk.X, padx=10, pady=(0, 10))
+    def _create_memory_overview_section(self) -> None:
+        """Create the main memory usage overview section."""
+        frame = self._create_section("Overall Memory Usage")
 
-        # Memory details
-        details_frame = tk.Frame(frame)
-        details_frame.pack(fill=tk.X, padx=10, pady=(0, 10))
-
-        self._create_info_row(details_frame, "Total", "memory_total", "0 GB")
-        self._create_info_row(details_frame, "Available", "memory_available", "0 GB")
-        self._create_info_row(details_frame, "Used", "memory_used", "0 GB")
-        self._create_info_row(details_frame, "Free", "memory_free", "0 GB")
-
-    def _create_virtual_memory_section(self) -> None:
-        """Create virtual memory details section"""
-        frame = tk.LabelFrame(
-            self.main_container,
-            text="Virtual Memory Details",
-            font=("Arial", 12, "bold"),
-        )
-        frame.pack(fill=tk.X, pady=(0, 10))
-
-        vm_frame = tk.Frame(frame)
-        vm_frame.pack(fill=tk.X, padx=10, pady=10)
-
-        # Virtual memory specific stats
-        self._create_info_row(vm_frame, "Percent Used", "vm_percent", "0.0%")
-        self._create_info_row(vm_frame, "Active", "vm_active", "0 GB")
-        self._create_info_row(vm_frame, "Inactive", "vm_inactive", "0 GB")
-        self._create_info_row(vm_frame, "Buffers", "vm_buffers", "0 GB")
-        self._create_info_row(vm_frame, "Cached", "vm_cached", "0 GB")
-        self._create_info_row(vm_frame, "Shared", "vm_shared", "0 GB")
-
-    def _create_swap_memory_section(self) -> None:
-        """Create swap memory section"""
-        frame = tk.LabelFrame(
-            self.main_container, text="Swap Memory", font=("Arial", 12, "bold")
-        )
-        frame.pack(fill=tk.X, pady=(0, 10))
-
-        # Swap usage percentage
-        usage_frame = tk.Frame(frame)
-        usage_frame.pack(fill=tk.X, padx=10, pady=10)
-
-        tk.Label(usage_frame, text="Swap Usage:", font=("Arial", 11)).pack(side=tk.LEFT)
-
-        self._widgets["swap_usage_label"] = tk.Label(
-            usage_frame, text="0.0%", font=("Arial", 11, "bold"), fg="orange"
-        )
-        self._widgets["swap_usage_label"].pack(side=tk.RIGHT)
-
-        # Progress bar for swap
-        self._widgets["swap_usage_bar"] = ttk.Progressbar(
-            frame, mode="determinate", length=300, maximum=100
-        )
-        self._widgets["swap_usage_bar"].pack(fill=tk.X, padx=10, pady=(0, 10))
-
-        # Swap details
-        swap_frame = tk.Frame(frame)
-        swap_frame.pack(fill=tk.X, padx=10, pady=(0, 10))
-
-        self._create_info_row(swap_frame, "Total", "swap_total", "0 GB")
-        self._create_info_row(swap_frame, "Used", "swap_used", "0 GB")
-        self._create_info_row(swap_frame, "Free", "swap_free", "0 GB")
-        self._create_info_row(swap_frame, "Swap In", "swap_sin", "0")
-        self._create_info_row(swap_frame, "Swap Out", "swap_sout", "0")
-
-    def _create_memory_stats_section(self) -> None:
-        """Create memory statistics section"""
-        frame = tk.LabelFrame(
-            self.main_container, text="Memory Statistics", font=("Arial", 12, "bold")
-        )
-        frame.pack(fill=tk.X, pady=(0, 10))
-
-        stats_frame = tk.Frame(frame)
-        stats_frame.pack(fill=tk.X, padx=10, pady=10)
-
-        # Platform-specific memory stats
-        self._create_info_row(stats_frame, "Page Faults", "page_faults", "0")
-        self._create_info_row(
-            stats_frame, "Major Page Faults", "major_page_faults", "0"
+        # Usage percentage with progress bar
+        self._create_usage_display(
+            frame, "Memory Usage:", "memory_usage_label", "memory_usage_bar"
         )
 
-    def _create_top_processes_section(self) -> None:
-        """Create top memory consuming processes section"""
-        frame = tk.LabelFrame(
-            self.main_container, text="Top Memory Processes", font=("Arial", 12, "bold")
-        )
-        frame.pack(fill=tk.X, pady=(0, 10))
+        # Memory breakdown
+        info_frame = tk.Frame(frame)
+        info_frame.pack(fill=tk.X, padx=10, pady=(0, 10))
 
-        tree_container = tk.Frame(frame)
-        tree_container.pack(fill=tk.X, padx=10, pady=10)
+        memory_fields = [
+            ("Total", "memory_total"),
+            ("Available", "memory_available"),
+            ("Used", "memory_used"),
+            ("Free", "memory_free"),
+        ]
 
-        # Create treeview
+        for label, key in memory_fields:
+            self._create_info_row(info_frame, label, key, "0 GB")
+
+    def _create_process_table_section(self) -> None:
+        """Create the top memory consuming processes table."""
+        frame = self._create_section("Top Memory Processes")
+
+        # Process table
         columns = ("PID", "Name", "Memory%", "Memory MB", "Status")
         tree = ttk.Treeview(
-            tree_container, columns=columns, show="headings", height=self.TREE_HEIGHT
+            frame, columns=columns, show="headings", height=self.PROCESS_TABLE_HEIGHT
         )
 
-        # Configure columns
+        # Configure columns with appropriate widths
+        column_widths = {
+            "PID": 80,
+            "Name": 150,
+            "Memory%": 100,
+            "Memory MB": 120,
+            "Status": 100,
+        }
         for col in columns:
             tree.heading(col, text=col)
-            tree.column(col, width=100, minwidth=50)
+            tree.column(col, width=column_widths.get(col, 100), minwidth=50)
 
-        # Add scrollbar
-        scrollbar = ttk.Scrollbar(tree_container, orient="vertical", command=tree.yview)
+        # Add scrollbar for table
+        scrollbar = ttk.Scrollbar(frame, orient="vertical", command=tree.yview)
         tree.configure(yscrollcommand=scrollbar.set)
 
-        tree.pack(side="left", fill="both", expand=True)
-        scrollbar.pack(side="right", fill="y")
+        tree.pack(side="left", fill="both", expand=True, padx=10, pady=10)
+        scrollbar.pack(side="right", fill="y", pady=10)
 
-        self._widgets["processes_tree"] = tree
+        self._widgets["process_table"] = tree
+
+    def _create_virtual_memory_section(self) -> None:
+        """Create virtual memory details section - platform aware."""
+        frame = self._create_section("Virtual Memory Details")
+
+        # Get a sample of virtual memory to check available attributes
+        vm_sample = psutil.virtual_memory()
+        # Remove unused variable
+        # available_attributes = [
+        #     attr for attr in dir(vm_sample) if not attr.startswith("_")
+        # ]
+
+        # Define platform-specific fields
+        if self._is_windows:
+            # Windows-specific virtual memory fields
+            vm_fields = [
+                ("Percent Used", "vm_percent", "%"),
+                ("Total", "vm_total", "GB"),
+                ("Available", "vm_available", "GB"),
+                ("Used", "vm_used", "GB"),
+                ("Free", "vm_free", "GB"),
+            ]
+        elif self._is_linux:
+            # Linux-specific virtual memory fields
+            vm_fields = [
+                ("Percent Used", "vm_percent", "%"),
+                ("Active", "vm_active", "GB"),
+                ("Inactive", "vm_inactive", "GB"),
+                ("Buffers", "vm_buffers", "GB"),
+                ("Cached", "vm_cached", "GB"),
+                ("Shared", "vm_shared", "GB"),
+                ("Available", "vm_available", "GB"),
+            ]
+        elif self._is_macos:
+            # macOS-specific virtual memory fields
+            vm_fields = [
+                ("Percent Used", "vm_percent", "%"),
+                ("Active", "vm_active", "GB"),
+                ("Inactive", "vm_inactive", "GB"),
+                ("Wired", "vm_wired", "GB"),
+                ("Available", "vm_available", "GB"),
+            ]
+        else:
+            # Generic fallback for other platforms
+            vm_fields = [
+                ("Percent Used", "vm_percent", "%"),
+                ("Available", "vm_available", "GB"),
+            ]
+
+        # Only create widgets for attributes that actually exist
+        for label, key, unit in vm_fields:
+            attr_name = key.replace("vm_", "") if key != "vm_percent" else "percent"
+            if hasattr(vm_sample, attr_name):
+                default_value = "0%" if unit == "%" else "0 GB"
+                self._create_info_row(frame, label, key, default_value)
+
+    def _create_swap_memory_section(self) -> None:
+        """Create swap memory monitoring section - always create widgets."""
+        frame = self._create_section("Swap Memory")
+
+        # Add status indicator
+        status_frame = tk.Frame(frame)
+        status_frame.pack(fill=tk.X, padx=10, pady=(10, 0))
+
+        tk.Label(status_frame, text="Status:", font=("Arial", 10)).pack(side=tk.LEFT)
+        status_text = "Available" if self._swap_available else "Not Configured"
+        status_color = "green" if self._swap_available else "orange"
+        self._widgets["swap_status"] = tk.Label(
+            status_frame, text=status_text, font=("Arial", 10, "bold"), fg=status_color
+        )
+        self._widgets["swap_status"].pack(side=tk.RIGHT)
+
+        # Always create swap usage display (will show 0% if no swap)
+        self._create_usage_display(
+            frame, "Swap Usage:", "swap_usage_label", "swap_usage_bar"
+        )
+
+        # Swap details - always create these widgets
+        info_frame = tk.Frame(frame)
+        info_frame.pack(fill=tk.X, padx=10, pady=(0, 10))
+
+        swap_fields = [
+            ("Total", "swap_total"),
+            ("Used", "swap_used"),
+            ("Free", "swap_free"),
+            ("Swap In", "swap_sin"),
+            ("Swap Out", "swap_sout"),
+        ]
+
+        for label, key in swap_fields:
+            default_value = (
+                "0 GB"
+                if key.startswith("swap_") and not key.endswith(("sin", "sout"))
+                else "0"
+            )
+            self._create_info_row(info_frame, label, key, default_value)
+
+    def _create_section(self, title: str) -> tk.LabelFrame:
+        """Create a labeled frame section."""
+        frame = tk.LabelFrame(
+            self.main_container, text=title, font=("Arial", 12, "bold")
+        )
+        frame.pack(fill=tk.X, pady=(0, 10))
+        return frame
+
+    def _create_usage_display(
+        self,
+        parent: Union[tk.Frame, tk.LabelFrame],
+        label: str,
+        label_key: str,
+        bar_key: str,
+    ) -> None:
+        """Create a usage percentage display with label and progress bar."""
+        # Usage percentage row
+        usage_frame = tk.Frame(parent)
+        usage_frame.pack(fill=tk.X, padx=10, pady=10)
+
+        tk.Label(usage_frame, text=label, font=("Arial", 11)).pack(side=tk.LEFT)
+        self._widgets[label_key] = tk.Label(
+            usage_frame, text="0.0%", font=("Arial", 11, "bold")
+        )
+        self._widgets[label_key].pack(side=tk.RIGHT)
+
+        # Progress bar
+        self._widgets[bar_key] = ttk.Progressbar(
+            parent, mode="determinate", length=300, maximum=100
+        )
+        self._widgets[bar_key].pack(fill=tk.X, padx=10, pady=(0, 10))
 
     def _create_info_row(
-        self, parent: tk.Widget, label: str, key: str, initial_value: str = "0"
+        self,
+        parent: Union[tk.Frame, tk.LabelFrame],
+        label: str,
+        key: str,
+        initial_value: str,
     ) -> None:
-        """Helper method to create a label-value row"""
+        """Create a label-value information row."""
         row = tk.Frame(parent)
         row.pack(fill=tk.X, pady=1)
+
         tk.Label(row, text=f"{label}:", font=("Arial", 10)).pack(side=tk.LEFT)
         self._widgets[key] = tk.Label(
             row, text=initial_value, font=("Arial", 10, "bold")
         )
         self._widgets[key].pack(side=tk.RIGHT)
 
-    def _update_memory_stats(self) -> None:
-        """Update all memory statistics"""
-        try:
-            self._update_overall_memory()
-            self._update_virtual_memory()
-            self._update_swap_memory()
-            self._update_top_processes()
-            self._update_memory_statistics()
-        except Exception as e:
-            print(f"Error updating memory stats: {e}")
-
-    def _update_overall_memory(self) -> None:
-        """Update overall memory usage"""
-        try:
-            memory = psutil.virtual_memory()
-
-            # Update percentage and progress bar
-            percent = memory.percent
-            self._widgets["memory_usage_label"].config(
-                text=f"{percent:.1f}%", fg=self._get_usage_color(percent)
-            )
-            self._widgets["memory_usage_bar"]["value"] = percent
-
-            # Update memory values
-            self._widgets["memory_total"].config(text=self._bytes_to_gb(memory.total))
-            self._widgets["memory_available"].config(
-                text=self._bytes_to_gb(memory.available)
-            )
-            self._widgets["memory_used"].config(text=self._bytes_to_gb(memory.used))
-            self._widgets["memory_free"].config(text=self._bytes_to_gb(memory.free))
-
-        except Exception as e:
-            print(f"Error updating overall memory: {e}")
-
-    def _update_virtual_memory(self) -> None:
-        """Update virtual memory details"""
-        try:
-            memory = psutil.virtual_memory()
-
-            self._widgets["vm_percent"].config(text=f"{memory.percent:.1f}%")
-
-            # Handle platform-specific attributes safely
-            self._update_memory_field(memory, "active", "vm_active")
-            self._update_memory_field(memory, "inactive", "vm_inactive")
-            self._update_memory_field(memory, "buffers", "vm_buffers")
-            self._update_memory_field(memory, "cached", "vm_cached")
-            self._update_memory_field(memory, "shared", "vm_shared")
-
-        except Exception as e:
-            print(f"Error updating virtual memory: {e}")
-
-    def _update_swap_memory(self) -> None:
-        """Update swap memory information"""
-        try:
-            swap = psutil.swap_memory()
-
-            # Update percentage and progress bar
-            percent = swap.percent
-            self._widgets["swap_usage_label"].config(
-                text=f"{percent:.1f}%", fg=self._get_usage_color(percent)
-            )
-            self._widgets["swap_usage_bar"]["value"] = percent
-
-            # Update swap values
-            self._widgets["swap_total"].config(text=self._bytes_to_gb(swap.total))
-            self._widgets["swap_used"].config(text=self._bytes_to_gb(swap.used))
-            self._widgets["swap_free"].config(text=self._bytes_to_gb(swap.free))
-            self._widgets["swap_sin"].config(text=f"{swap.sin:,}")
-            self._widgets["swap_sout"].config(text=f"{swap.sout:,}")
-
-        except Exception as e:
-            print(f"Error updating swap memory: {e}")
-
-    def _update_memory_statistics(self) -> None:
-        """Update memory statistics"""
-        try:
-            # Get system-wide memory statistics if available
-            if hasattr(psutil, "virtual_memory"):
-                # For basic page fault information, we'd need to track process stats
-                # This is a simplified version - more detailed stats would require
-                # platform-specific implementations
-                total_page_faults = 0
-                major_page_faults = 0
-
-                # Sum page faults from all processes (this might be slow)
-                try:
-                    for proc in psutil.process_iter(["pid", "memory_info"]):
-                        try:
-                            if hasattr(proc.info["memory_info"], "pfaults"):
-                                total_page_faults += proc.info["memory_info"].pfaults
-                            if hasattr(proc.info["memory_info"], "pageins"):
-                                major_page_faults += proc.info["memory_info"].pageins
-                        except (
-                            psutil.NoSuchProcess,
-                            psutil.AccessDenied,
-                            AttributeError,
-                        ):
-                            continue
-                except Exception:
-                    pass  # Skip if this takes too long or fails
-
-                self._widgets["page_faults"].config(text=f"{total_page_faults:,}")
-                self._widgets["major_page_faults"].config(text=f"{major_page_faults:,}")
-
-        except Exception as e:
-            print(f"Error updating memory statistics: {e}")
-
-    def _update_top_processes(self) -> None:
-        """Update top memory consuming processes"""
-        try:
-            tree = self._widgets["processes_tree"]
-
-            # Clear existing items
-            for item in tree.get_children():
-                tree.delete(item)
-
-            # Get sorted processes by memory usage
-            processes = self._get_sorted_processes()
-
-            # Add top processes to tree
-            for proc in processes[: self.TOP_PROCESS_COUNT]:
-                try:
-                    # Truncate process name if too long
-                    name = proc["name"][: self.MAX_PROCESS_NAME_LENGTH]
-                    if len(proc["name"]) > self.MAX_PROCESS_NAME_LENGTH:
-                        name += "..."
-
-                    memory_mb = proc["memory_info"].rss / (1024 * 1024)
-
-                    tree.insert(
-                        "",
-                        "end",
-                        values=(
-                            proc["pid"],
-                            name,
-                            f"{proc['memory_percent']:.1f}%",
-                            f"{memory_mb:.1f} MB",
-                            proc["status"],
-                        ),
-                    )
-                except Exception as e:
-                    print(f"Error adding process to tree: {e}")
-
-        except Exception as e:
-            print(f"Error updating top processes: {e}")
-
-    def _get_sorted_processes(self) -> List[Dict]:
-        """Get processes sorted by memory usage"""
+    def _get_top_processes(self) -> List[ProcessInfo]:
+        """Get top memory consuming processes."""
         processes = []
+
         try:
             for proc in psutil.process_iter(
                 ["pid", "name", "memory_percent", "memory_info", "status"]
             ):
                 try:
-                    processes.append(proc.info)
-                except (psutil.NoSuchProcess, psutil.AccessDenied):
-                    pass
+                    info = proc.info
+                    if not info or info.get("memory_percent") is None:
+                        continue
 
-            # Sort by memory percentage (descending)
-            processes.sort(key=lambda x: x.get("memory_percent", 0), reverse=True)
+                    memory_mb = 0
+                    if info.get("memory_info"):
+                        memory_mb = info["memory_info"].rss / (1024 * 1024)
+
+                    process_info = ProcessInfo(
+                        pid=info.get("pid", 0),
+                        name=(info.get("name") or "Unknown")[
+                            : self.MAX_PROCESS_NAME_LENGTH
+                        ],
+                        memory_percent=info.get("memory_percent", 0) or 0,
+                        memory_mb=memory_mb,
+                        status=(info.get("status", "Unknown"))[:10],
+                    )
+                    processes.append(process_info)
+
+                except (
+                    psutil.NoSuchProcess,
+                    psutil.AccessDenied,
+                    psutil.ZombieProcess,
+                ):
+                    continue
+
+                # Performance limit
+                if len(processes) > 200:
+                    break
 
         except Exception as e:
-            print(f"Error getting sorted processes: {e}")
+            self.logger.error(f"Error getting processes: {e}")
 
-        return processes
+        return sorted(processes, key=lambda x: x.memory_percent, reverse=True)[
+            : self.TOP_PROCESS_COUNT
+        ]
+
+    def _update_memory_stats(self, vm_data) -> None:
+        """Update virtual memory statistics with platform awareness."""
+        if not vm_data:
+            return
+
+        # Main memory usage - simplified progress bar update
+        memory_percent = vm_data.percent
+        self._widgets["memory_usage_label"].config(
+            text=f"{memory_percent:.1f}%", fg=self._get_usage_color(memory_percent)
+        )
+        self._widgets["memory_usage_bar"]["value"] = memory_percent
+
+        # Memory amounts
+        self._widgets["memory_total"].config(
+            text=self._format_bytes_to_gb(vm_data.total)
+        )
+        self._widgets["memory_available"].config(
+            text=self._format_bytes_to_gb(vm_data.available)
+        )
+        self._widgets["memory_used"].config(text=self._format_bytes_to_gb(vm_data.used))
+        self._widgets["memory_free"].config(text=self._format_bytes_to_gb(vm_data.free))
+
+        # Platform-specific virtual memory details
+        self._update_platform_specific_vm_stats(vm_data)
+
+    def _update_platform_specific_vm_stats(self, vm_data) -> None:
+        """Update platform-specific virtual memory statistics."""
+        # Always update percent if widget exists
+        if "vm_percent" in self._widgets:
+            self._widgets["vm_percent"].config(text=f"{vm_data.percent:.1f}%")
+
+        # Platform-specific attributes
+        platform_attributes = {
+            "Windows": ["total", "available", "used", "free"],
+            "Linux": ["active", "inactive", "buffers", "cached", "shared", "available"],
+            "Darwin": ["active", "inactive", "wired", "available"],  # macOS
+        }
+
+        current_platform = platform.system()
+        attributes_to_update = platform_attributes.get(current_platform, ["available"])
+
+        for attr_name in attributes_to_update:
+            widget_key = f"vm_{attr_name}"
+            if widget_key in self._widgets and hasattr(vm_data, attr_name):
+                value = getattr(vm_data, attr_name)
+                self._widgets[widget_key].config(text=self._format_bytes_to_gb(value))
+
+    def _update_swap_stats(self, swap_data) -> None:
+        """Update swap memory statistics - always safe to call."""
+        if swap_data and swap_data.total > 0:
+            # Update swap availability status
+            if not self._swap_available:
+                self._swap_available = True
+                if "swap_status" in self._widgets:
+                    self._widgets["swap_status"].config(text="Available", fg="green")
+
+            # Update swap usage
+            swap_percent = swap_data.percent
+            self._widgets["swap_usage_label"].config(
+                text=f"{swap_percent:.1f}%", fg=self._get_usage_color(swap_percent)
+            )
+            self._widgets["swap_usage_bar"]["value"] = swap_percent
+
+            # Update swap amounts
+            self._widgets["swap_total"].config(
+                text=self._format_bytes_to_gb(swap_data.total)
+            )
+            self._widgets["swap_used"].config(
+                text=self._format_bytes_to_gb(swap_data.used)
+            )
+            self._widgets["swap_free"].config(
+                text=self._format_bytes_to_gb(swap_data.free)
+            )
+            self._widgets["swap_sin"].config(text=f"{swap_data.sin:,}")
+            self._widgets["swap_sout"].config(text=f"{swap_data.sout:,}")
+
+        else:
+            # No swap available - show zeros
+            self._widgets["swap_usage_label"].config(text="0.0%", fg="gray")
+            self._widgets["swap_usage_bar"]["value"] = 0
+
+            # Set all swap values to appropriate defaults
+            self._widgets["swap_total"].config(text="0 GB")
+            self._widgets["swap_used"].config(text="0 GB")
+            self._widgets["swap_free"].config(text="0 GB")
+            self._widgets["swap_sin"].config(text="0")
+            self._widgets["swap_sout"].config(text="0")
+
+            # Update status if needed
+            if self._swap_available:
+                self._swap_available = False
+                if "swap_status" in self._widgets:
+                    self._widgets["swap_status"].config(
+                        text="Not Configured", fg="orange"
+                    )
+
+    def _update_process_table(self, processes: List[ProcessInfo]) -> None:
+        """Update the process table with top memory consumers."""
+        tree = self._widgets.get("process_table")
+        if not tree:
+            return
+
+        # Clear and repopulate
+        tree.delete(*tree.get_children())
+
+        for process in processes:
+            tree.insert(
+                "",
+                "end",
+                values=(
+                    process.pid,
+                    process.name,
+                    f"{process.memory_percent:.1f}%",
+                    f"{process.memory_mb:.1f}",
+                    process.status,
+                ),
+            )
 
     def _get_usage_color(self, percentage: float) -> str:
-        """Get color based on usage percentage"""
+        """Get color based on memory usage percentage."""
         if percentage < 50:
-            return "green"
+            return self.USAGE_COLORS["low"]
         elif percentage < 80:
-            return "orange"
+            return self.USAGE_COLORS["medium"]
         else:
-            return "red"
+            return self.USAGE_COLORS["high"]
 
-    def _bytes_to_gb(self, bytes_value: int) -> str:
-        """Convert bytes to GB string"""
-        return f"{bytes_value / (1024**3):.2f} GB"
-
-    def _start_updates(self) -> None:
-        """Start automatic updates"""
-        self._update_memory_stats()
-        self._frame.after(self._update_interval, self._start_updates)
-
-    def _create_section_frame(self, title: str) -> tk.Frame:
-        """Create a standard section frame with title"""
-        frame = tk.LabelFrame(
-            self.main_container, text=title, font=("Arial", 12, "bold")
-        )
-        frame.pack(fill=tk.X, pady=(0, 10))
-
-        content_frame = tk.Frame(frame)
-        content_frame.pack(fill=tk.X, padx=10, pady=10)
-        return content_frame
-
-    def _update_memory_field(self, memory_obj, attr_name, widget_key):
-        """Safely update memory field if attribute exists"""
-        if hasattr(memory_obj, attr_name):
-            value = getattr(memory_obj, attr_name)
-            self._widgets[widget_key].config(text=self._bytes_to_gb(value))
-        else:
-            self._widgets[widget_key].config(text="N/A")
+    def _format_bytes_to_gb(self, bytes_value: int) -> str:
+        """Convert bytes to readable GB format."""
+        return f"{bytes_value / self.BYTES_TO_GB:.2f} GB"

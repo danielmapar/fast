@@ -1,224 +1,223 @@
+import platform
 import tkinter as tk
 import tkinter.ttk as ttk
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional, override
 
 import psutil
 
+from app.logger.config import Logger, LogType
 from app.ui.hardware_monitoring_frames.base_frame import BaseHardwareMonitoringFrame
 
 
 class CPUFrame(BaseHardwareMonitoringFrame):
-    # Constants
-    UPDATE_INTERVAL = 1000  # milliseconds
-    PROGRESS_BAR_LENGTH = 200
-    TREE_HEIGHT = 8
-    MAX_PROCESS_NAME_LENGTH = 20
+
+    UPDATE_INTERVAL = 1000
     TOP_PROCESS_COUNT = 10
+    MAX_PROCESS_NAME_LENGTH = 20
 
     def __init__(self, notebook: ttk.Notebook) -> None:
-        self._update_interval = self.UPDATE_INTERVAL
-        self._widgets: Dict[str, Any] = {}
-        self._per_core_bars: List[ttk.Progressbar] = []
-        self._per_core_labels: List[tk.Label] = []
-        self.main_container: tk.Frame = tk.Frame()
+        self.logger = Logger().get_logger(LogType.CPU_MONITORING)
+
+        # UI components
+        self.cpu_usage_label: tk.Label
+        self.cpu_usage_bar: ttk.Progressbar
+        self.per_core_container: tk.Frame
+        self.per_core_bars: List[ttk.Progressbar] = []
+        self.per_core_labels: List[tk.Label] = []
+        self.process_tree: ttk.Treeview
+
+        # Info labels for various metrics
+        self.logical_cpus_label: tk.Label
+        self.physical_cpus_label: tk.Label
+        self.freq_current_label: tk.Label
+        self.freq_min_label: tk.Label
+        self.freq_max_label: tk.Label
+
+        self.is_windows = platform.system() == "Windows"
+        self.is_linux = platform.system() == "Linux"
+        self.is_macos = platform.system() == "Darwin"
+        self.UPDATE_INTERVAL = (
+            self.UPDATE_INTERVAL * 2 if self.is_windows else self.UPDATE_INTERVAL
+        )
+
+        # Initialize baseline CPU measurements for immediate data availability
+        self._initialize_cpu_baseline()
 
         super().__init__(notebook, "CPU")
-        self._start_updates()
 
+    def _initialize_cpu_baseline(self) -> None:
+        """Initialize CPU baseline measurements so first data collection shows real values."""
+        try:
+            # Call cpu_percent to establish baseline - this first call will return 0.0 but sets up future calls
+            psutil.cpu_percent(interval=None)
+            psutil.cpu_percent(interval=None, percpu=True)
+            self.logger.debug("CPU baseline measurements initialized")
+        except Exception as e:
+            self.logger.error(f"Error initializing CPU baseline: {e}")
+
+    @override
     def setup_frame(self) -> None:
-        """Setup the CPU monitoring interface with multiple statistics"""
-        # Get the scrollable container from the base class
+        """Setup the CPU monitoring interface."""
         self.main_container = tk.Frame(self.get_scrollable_container())
         self.main_container.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
 
-        # Title
-        # title_label = tk.Label(
-        #     self.main_container, text="CPU Monitoring", font=("Arial", 16, "bold")
-        # )
-        # title_label.pack(pady=(0, 15))
+        self._setup_overall_usage()
+        self._setup_per_core_usage()
+        self._setup_top_processes()
+        self._setup_cpu_info()
+        self._setup_frequency_info()
 
-        # Create sections
-        self._create_overall_usage_section()
-        self._create_per_core_section()
-        self._create_top_processes_section()
-        self._create_cpu_times_section()
-        self._create_cpu_info_section()
-        self._create_frequency_section()
-        self._create_cpu_stats_section()
+        self.start_threaded_updates(self.UPDATE_INTERVAL)
 
-        # Initial update
-        self._update_cpu_stats()
+    @override
+    def _collect_data_threaded(self) -> Optional[Dict[str, Any]]:
+        """Collect all CPU data in background thread."""
+        try:
+            return {
+                "cpu_percent": psutil.cpu_percent(interval=None),
+                "per_cpu_percent": psutil.cpu_percent(interval=None, percpu=True),
+                "logical_cpus": psutil.cpu_count(logical=True),
+                "physical_cpus": psutil.cpu_count(logical=False),
+                "cpu_freq": self._safe_get_cpu_freq(),
+                "top_processes": self._get_top_processes(),
+            }
+        except Exception as e:
+            self.logger.error(f"Error collecting CPU data: {e}")
+            return None
 
+    @override
+    def _update_ui_with_data(self, data: Dict[str, Any]) -> None:
+        """Update UI with collected data."""
+        if not data:
+            return
+
+        try:
+            self._update_overall_usage(data.get("cpu_percent", 0))
+            self._update_cpu_info(data)
+            self._update_per_core_usage(data.get("per_cpu_percent", []))
+            self._update_frequency(data.get("cpu_freq"))
+            self._update_top_processes(data.get("top_processes", []))
+        except Exception as e:
+            self.logger.error(f"Error updating CPU UI: {e}")
+
+    @override
     def _resize_widgets(self, canvas_width: int) -> None:
-        """Override base class method to handle CPU-specific widget resizing"""
-        # Calculate progress bar length based on canvas width
+        """Handle widget resizing based on canvas width."""
         progress_length = max(150, min(300, canvas_width - 200))
 
         # Resize main progress bar
-        if "cpu_usage_bar" in self._widgets:
-            self._widgets["cpu_usage_bar"].config(length=progress_length)
+        self.cpu_usage_bar.config(length=progress_length)
 
         # Resize per-core progress bars
         core_length = max(150, progress_length - 100)
-        for progress_bar in self._per_core_bars:
+        for progress_bar in self.per_core_bars:
             progress_bar.config(length=core_length)
 
-    def _create_overall_usage_section(self) -> None:
-        """Create overall CPU usage section"""
-        frame = tk.LabelFrame(
-            self.main_container, text="Overall CPU Usage", font=("Arial", 12, "bold")
+    def _setup_overall_usage(self) -> None:
+        """Create overall CPU usage section."""
+        frame = self._create_section("Overall CPU Usage")
+
+        # CPU usage display
+        usage_row = tk.Frame(frame)
+        usage_row.pack(fill=tk.X, padx=10, pady=10)
+
+        tk.Label(usage_row, text="CPU Usage:", font=("Arial", 11)).pack(side=tk.LEFT)
+        self.cpu_usage_label = tk.Label(
+            usage_row, text="0.0%", font=("Arial", 11, "bold"), fg="blue"
         )
-        frame.pack(fill=tk.X, pady=(0, 10))
+        self.cpu_usage_label.pack(side=tk.RIGHT)
 
-        # CPU usage percentage
-        usage_frame = tk.Frame(frame)
-        usage_frame.pack(fill=tk.X, padx=10, pady=10)
-
-        tk.Label(usage_frame, text="CPU Usage:", font=("Arial", 11)).pack(side=tk.LEFT)
-
-        self._widgets["cpu_usage_label"] = tk.Label(
-            usage_frame, text="0.0%", font=("Arial", 11, "bold"), fg="blue"
-        )
-        self._widgets["cpu_usage_label"].pack(side=tk.RIGHT)
-
-        # Progress bar for visual representation (initial size, will be resized)
-        self._widgets["cpu_usage_bar"] = ttk.Progressbar(
+        # Progress bar
+        self.cpu_usage_bar = ttk.Progressbar(
             frame, mode="determinate", length=300, maximum=100
         )
-        self._widgets["cpu_usage_bar"].pack(fill=tk.X, padx=10, pady=(0, 10))
+        self.cpu_usage_bar.pack(fill=tk.X, padx=10, pady=(0, 10))
 
-    def _create_info_row(
-        self, parent: tk.Widget, label: str, key: str, initial_value: str = "0"
-    ) -> None:
-        """Helper method to create a label-value row"""
-        row = tk.Frame(parent)
-        row.pack(fill=tk.X, pady=1)
-        tk.Label(row, text=f"{label}:", font=("Arial", 10)).pack(side=tk.LEFT)
-        self._widgets[key] = tk.Label(
-            row, text=initial_value, font=("Arial", 10, "bold")
-        )
-        self._widgets[key].pack(side=tk.RIGHT)
+    def _setup_per_core_usage(self) -> None:
+        """Create per-core CPU usage section."""
+        frame = self._create_section("Per-Core CPU Usage")
+        self.per_core_container = tk.Frame(frame)
+        self.per_core_container.pack(fill=tk.X, padx=10, pady=10)
 
-    def _create_cpu_info_section(self) -> None:
-        """Create CPU information section"""
-        frame = tk.LabelFrame(
-            self.main_container, text="CPU Information", font=("Arial", 12, "bold")
-        )
-        frame.pack(fill=tk.X, pady=(0, 10))
-
-        info_frame = tk.Frame(frame)
-        info_frame.pack(fill=tk.X, padx=10, pady=10)
-
-        # Use helper method for cleaner code
-        self._create_info_row(info_frame, "Logical CPUs", "logical_cpus")
-        self._create_info_row(info_frame, "Physical Cores", "physical_cpus")
-
-    def _create_per_core_section(self) -> None:
-        """Create per-core CPU usage section"""
-        frame = tk.LabelFrame(
-            self.main_container, text="Per-Core CPU Usage", font=("Arial", 12, "bold")
-        )
-        frame.pack(fill=tk.X, pady=(0, 10))
-
-        # Container for per-core widgets
-        self._widgets["per_core_container"] = tk.Frame(frame)
-        self._widgets["per_core_container"].pack(fill=tk.X, padx=10, pady=10)
-
-    def _create_cpu_times_section(self) -> None:
-        """Create CPU times section"""
-        frame = tk.LabelFrame(
-            self.main_container, text="CPU Times", font=("Arial", 12, "bold")
-        )
-        frame.pack(fill=tk.X, pady=(0, 10))
-
-        times_frame = tk.Frame(frame)
-        times_frame.pack(fill=tk.X, padx=10, pady=10)
-
-        # Simplified with helper method
-        for time_type in ["User", "System", "Idle", "Nice", "IOWait"]:
-            self._create_info_row(
-                times_frame, time_type, f"cpu_time_{time_type.lower()}", "0.0%"
-            )
-
-    def _create_frequency_section(self) -> None:
-        """Create CPU frequency section"""
-        frame = tk.LabelFrame(
-            self.main_container, text="CPU Frequency", font=("Arial", 12, "bold")
-        )
-        frame.pack(fill=tk.X, pady=(0, 10))
-
-        freq_frame = tk.Frame(frame)
-        freq_frame.pack(fill=tk.X, padx=10, pady=10)
-
-        # Simplified with helper method
-        for freq_type in [
-            ("Current", "freq_current"),
-            ("Min", "freq_min"),
-            ("Max", "freq_max"),
-        ]:
-            self._create_info_row(freq_frame, freq_type[0], freq_type[1], "0 MHz")
-
-    def _create_cpu_stats_section(self) -> None:
-        """Create CPU statistics section"""
-        frame = tk.LabelFrame(
-            self.main_container, text="CPU Statistics", font=("Arial", 12, "bold")
-        )
-        frame.pack(fill=tk.X, pady=(0, 10))
-
-        stats_frame = tk.Frame(frame)
-        stats_frame.pack(fill=tk.X, padx=10, pady=10)
-
-        # Simplified with helper method
-        stats = ["Context Switches", "Interrupts", "Soft Interrupts", "System Calls"]
-        for stat in stats:
-            self._create_info_row(
-                stats_frame, stat, f'cpu_stat_{stat.lower().replace(" ", "_")}'
-            )
-
-    def _create_top_processes_section(self) -> None:
-        """Create top CPU consuming processes section"""
-        frame = tk.LabelFrame(
-            self.main_container, text="Top CPU Processes", font=("Arial", 12, "bold")
-        )
-        frame.pack(fill=tk.X, pady=(0, 10))
-
+    def _setup_top_processes(self) -> None:
+        """Create top CPU consuming processes section."""
+        frame = self._create_section("Top CPU Processes")
         tree_container = tk.Frame(frame)
         tree_container.pack(fill=tk.X, padx=10, pady=10)
 
-        # Create treeview
+        # Process tree with scrollbar
         columns = ("PID", "Name", "CPU%", "Memory%")
-        tree = ttk.Treeview(
-            tree_container, columns=columns, show="headings", height=self.TREE_HEIGHT
+        self.process_tree = ttk.Treeview(
+            tree_container, columns=columns, show="headings", height=8
         )
 
-        # Configure columns
         for col in columns:
-            tree.heading(col, text=col)
-            tree.column(col, width=100, minwidth=50)
+            self.process_tree.heading(col, text=col)
+            self.process_tree.column(col, width=100, minwidth=50)
 
-        # Add scrollbar
-        scrollbar = ttk.Scrollbar(tree_container, orient="vertical", command=tree.yview)
-        tree.configure(yscrollcommand=scrollbar.set)
+        scrollbar = ttk.Scrollbar(
+            tree_container, orient="vertical", command=self.process_tree.yview
+        )
+        self.process_tree.configure(yscrollcommand=scrollbar.set)
 
-        # Pack widgets
-        tree.pack(side="left", fill="both", expand=True)
+        self.process_tree.pack(side="left", fill="both", expand=True)
         scrollbar.pack(side="right", fill="y")
 
-        self._widgets["process_tree"] = tree
+    def _setup_cpu_info(self) -> None:
+        """Create CPU information section."""
+        frame = self._create_section("CPU Information")
+        info_container = tk.Frame(frame)
+        info_container.pack(fill=tk.X, padx=10, pady=10)
+
+        self.logical_cpus_label = self._create_info_row(info_container, "Logical CPUs")
+        self.physical_cpus_label = self._create_info_row(
+            info_container, "Physical Cores"
+        )
+
+    def _setup_frequency_info(self) -> None:
+        """Create CPU frequency section."""
+        frame = self._create_section("CPU Frequency")
+        freq_container = tk.Frame(frame)
+        freq_container.pack(fill=tk.X, padx=10, pady=10)
+
+        self.freq_current_label = self._create_info_row(
+            freq_container, "Current", "0 MHz"
+        )
+        self.freq_min_label = self._create_info_row(freq_container, "Min", "0 MHz")
+        self.freq_max_label = self._create_info_row(freq_container, "Max", "0 MHz")
+
+    def _create_section(self, title: str) -> tk.LabelFrame:
+        """Create a labeled section frame."""
+        frame = tk.LabelFrame(
+            self.main_container, text=title, font=("Arial", 12, "bold")
+        )
+        frame.pack(fill=tk.X, pady=(0, 10))
+        return frame
+
+    def _create_info_row(
+        self, parent: tk.Widget, label: str, initial_value: str = "0"
+    ) -> tk.Label:
+        """Create a label-value row and return the value label."""
+        row = tk.Frame(parent)
+        row.pack(fill=tk.X, pady=1)
+
+        tk.Label(row, text=f"{label}:", font=("Arial", 10)).pack(side=tk.LEFT)
+        value_label = tk.Label(row, text=initial_value, font=("Arial", 10, "bold"))
+        value_label.pack(side=tk.RIGHT)
+        return value_label
 
     def _create_per_core_widgets(self) -> None:
-        """Create widgets for per-core CPU usage display"""
+        """Create widgets for per-core CPU usage display."""
         # Clear existing widgets
-        for widget in self._per_core_bars + self._per_core_labels:
+        for widget in self.per_core_bars + self.per_core_labels:
             widget.destroy()
-        self._per_core_bars.clear()
-        self._per_core_labels.clear()
+        self.per_core_bars.clear()
+        self.per_core_labels.clear()
 
         cpu_count = psutil.cpu_count(logical=True)
-        container = self._widgets["per_core_container"]
 
         for i in range(cpu_count):
-            core_frame = tk.Frame(container)
+            core_frame = tk.Frame(self.per_core_container)
             core_frame.pack(fill=tk.X, pady=2)
 
             tk.Label(
@@ -239,158 +238,109 @@ class CPUFrame(BaseHardwareMonitoringFrame):
             )
             percent_label.pack(side=tk.RIGHT)
 
-            self._per_core_bars.append(progress_bar)
-            self._per_core_labels.append(percent_label)
+            self.per_core_bars.append(progress_bar)
+            self.per_core_labels.append(percent_label)
 
         self.update_scroll_region()
 
-    def _update_cpu_stats(self) -> None:
-        """Update all CPU statistics"""
+    def _safe_get_cpu_freq(self) -> Optional[Any]:
+        """Safely get CPU frequency, returning None if not available."""
         try:
-            self._update_overall_usage()
-            self._update_cpu_info()
-            self._update_per_core_usage()
-            self._update_cpu_times()
-            self._update_cpu_frequency()
-            self._update_cpu_statistics()
-            self._update_top_processes()
+            return psutil.cpu_freq()
+        except Exception:
+            return None
+
+    def _get_top_processes(self) -> List[Dict]:
+        """Get top processes sorted by CPU usage."""
+        processes = []
+        try:
+            for proc in psutil.process_iter(
+                ["pid", "name", "cpu_percent", "memory_percent"]
+            ):
+                try:
+                    info = proc.info
+                    if info and info.get("cpu_percent") is not None:
+                        processes.append(info)
+                except (
+                    psutil.NoSuchProcess,
+                    psutil.AccessDenied,
+                    psutil.ZombieProcess,
+                ):
+                    continue
+
+                # Limit for performance
+                if len(processes) > 100:
+                    break
+
         except Exception as e:
-            print(f"Error updating CPU stats: {e}")
+            self.logger.error(f"Error getting processes: {e}")
 
-    def _update_overall_usage(self) -> None:
-        """Update overall CPU usage section"""
-        cpu_percent = psutil.cpu_percent(interval=None)
-        self._widgets["cpu_usage_label"].config(
-            text=f"{cpu_percent:.1f}%", fg=self._get_usage_color(cpu_percent)
+        return sorted(
+            processes, key=lambda x: x.get("cpu_percent", 0) or 0, reverse=True
         )
-        self._widgets["cpu_usage_bar"]["value"] = cpu_percent
 
-    def _update_cpu_info(self) -> None:
-        """Update CPU information section"""
-        logical_cpus = psutil.cpu_count(logical=True)
-        physical_cpus = psutil.cpu_count(logical=False)
-        self._widgets["logical_cpus"].config(text=str(logical_cpus))
-        self._widgets["physical_cpus"].config(text=str(physical_cpus or "N/A"))
+    def _update_overall_usage(self, cpu_percent: float) -> None:
+        """Update overall CPU usage display."""
+        color = self._get_usage_color(cpu_percent)
+        self.cpu_usage_label.config(text=f"{cpu_percent:.1f}%", fg=color)
+        self.cpu_usage_bar["value"] = cpu_percent
 
-    def _update_per_core_usage(self) -> None:
-        """Update per-core CPU usage"""
-        if not self._per_core_bars:
+    def _update_cpu_info(self, data: Dict[str, Any]) -> None:
+        """Update CPU information display."""
+        self.logical_cpus_label.config(text=str(data.get("logical_cpus", "N/A")))
+        physical_cpus = data.get("physical_cpus") or "N/A"
+        self.physical_cpus_label.config(text=str(physical_cpus))
+
+    def _update_per_core_usage(self, per_cpu_percent: List[float]) -> None:
+        """Update per-core CPU usage display."""
+        if not per_cpu_percent:
+            return
+
+        # Create widgets if they don't exist
+        if not self.per_core_bars:
             self._create_per_core_widgets()
 
-        per_cpu_percent = psutil.cpu_percent(interval=None, percpu=True)
         for i, percent in enumerate(per_cpu_percent):
-            if i < len(self._per_core_bars):
-                self._per_core_bars[i]["value"] = percent
-                self._per_core_labels[i].config(text=f"{percent:.1f}%")
+            if i < len(self.per_core_bars):
+                self.per_core_bars[i]["value"] = percent
+                self.per_core_labels[i].config(text=f"{percent:.1f}%")
 
-    def _update_cpu_times(self) -> None:
-        """Update CPU times section"""
-        try:
-            cpu_times_percent = psutil.cpu_times_percent(interval=None)
-            time_attrs = ["user", "system", "idle", "nice", "iowait"]
+    def _update_frequency(self, cpu_freq: Optional[Any]) -> None:
+        """Update CPU frequency display."""
+        if cpu_freq:
+            self.freq_current_label.config(text=f"{cpu_freq.current:.0f} MHz")
+            self.freq_min_label.config(text=f"{cpu_freq.min:.0f} MHz")
+            self.freq_max_label.config(text=f"{cpu_freq.max:.0f} MHz")
+        else:
+            for label in [
+                self.freq_current_label,
+                self.freq_min_label,
+                self.freq_max_label,
+            ]:
+                label.config(text="N/A")
 
-            for attr in time_attrs:
-                if hasattr(cpu_times_percent, attr):
-                    value = getattr(cpu_times_percent, attr)
-                    self._widgets[f"cpu_time_{attr}"].config(text=f"{value:.1f}%")
-        except Exception:
-            pass
+    def _update_top_processes(self, processes: List[Dict]) -> None:
+        """Update top processes display."""
+        # Clear and repopulate tree
+        self.process_tree.delete(*self.process_tree.get_children())
 
-    def _update_cpu_frequency(self) -> None:
-        """Update CPU frequency section"""
-        try:
-            cpu_freq = psutil.cpu_freq()
-            if cpu_freq:
-                freq_data = [
-                    ("freq_current", cpu_freq.current),
-                    ("freq_min", cpu_freq.min),
-                    ("freq_max", cpu_freq.max),
-                ]
-                for key, value in freq_data:
-                    self._widgets[key].config(text=f"{value:.0f} MHz")
-            else:
-                for key in ["freq_current", "freq_min", "freq_max"]:
-                    self._widgets[key].config(text="N/A")
-        except Exception:
-            for key in ["freq_current", "freq_min", "freq_max"]:
-                self._widgets[key].config(text="N/A")
-
-    def _update_cpu_statistics(self) -> None:
-        """Update CPU statistics"""
-        try:
-            stats = psutil.cpu_stats()
-            self._widgets["cpu_stat_context_switches"].config(
-                text=f"{stats.ctx_switches:,}"
+        for proc in processes[: self.TOP_PROCESS_COUNT]:
+            self.process_tree.insert(
+                "",
+                "end",
+                values=(
+                    proc.get("pid", "N/A"),
+                    (proc.get("name") or "N/A")[: self.MAX_PROCESS_NAME_LENGTH],
+                    f"{proc.get('cpu_percent', 0) or 0:.1f}%",
+                    f"{proc.get('memory_percent', 0) or 0:.1f}%",
+                ),
             )
-            self._widgets["cpu_stat_interrupts"].config(text=f"{stats.interrupts:,}")
-            if hasattr(stats, "soft_interrupts"):
-                self._widgets["cpu_stat_soft_interrupts"].config(
-                    text=f"{stats.soft_interrupts:,}"
-                )
-            if hasattr(stats, "syscalls"):
-                self._widgets["cpu_stat_system_calls"].config(
-                    text=f"{stats.syscalls:,}"
-                )
-        except Exception:
-            pass
-
-    def _update_top_processes(self) -> None:
-        """Update top CPU consuming processes"""
-        try:
-            tree = self._widgets["process_tree"]
-
-            # Clear existing items
-            tree.delete(*tree.get_children())
-
-            # Get and sort processes
-            processes = self._get_sorted_processes()
-
-            # Insert top processes
-            for proc in processes[: self.TOP_PROCESS_COUNT]:
-                tree.insert(
-                    "",
-                    "end",
-                    values=(
-                        proc["pid"],
-                        (proc["name"] or "N/A")[: self.MAX_PROCESS_NAME_LENGTH],
-                        (
-                            f"{proc['cpu_percent']:.1f}%"
-                            if proc["cpu_percent"]
-                            else "0.0%"
-                        ),
-                        (
-                            f"{proc['memory_percent']:.1f}%"
-                            if proc["memory_percent"]
-                            else "0.0%"
-                        ),
-                    ),
-                )
-        except Exception:
-            pass
-
-    def _get_sorted_processes(self) -> List[Dict]:
-        """Get processes sorted by CPU usage"""
-        processes = []
-        for proc in psutil.process_iter(
-            ["pid", "name", "cpu_percent", "memory_percent"]
-        ):
-            try:
-                processes.append(proc.info)
-            except (psutil.NoSuchProcess, psutil.AccessDenied):
-                pass
-
-        return sorted(processes, key=lambda x: x["cpu_percent"] or 0, reverse=True)
 
     def _get_usage_color(self, percentage: float) -> str:
-        """Get color based on CPU usage percentage"""
+        """Get color based on CPU usage percentage."""
         if percentage > 80:
             return "red"
         elif percentage > 60:
             return "orange"
         else:
             return "green"
-
-    def _start_updates(self) -> None:
-        """Start the periodic updates"""
-        self._update_cpu_stats()
-        self._frame.after(self._update_interval, self._start_updates)
