@@ -1,4 +1,5 @@
 import tkinter as tk
+import webbrowser
 from typing import Union
 
 from PIL import Image, ImageTk
@@ -19,6 +20,21 @@ class WindowUtils:
 
         # CRITICAL: Keep a reference to prevent garbage collection
         logo_label.image = logo_photo  # type: ignore
+
+        # Add repository link under the logo
+        def open_repository():
+            webbrowser.open("https://github.com/danielmapar/fast")
+
+        repo_link = tk.Label(
+            window,
+            text="danielmapar/fast",
+            fg="blue",
+            cursor="hand2",
+            bg="#FFFFFF",
+            font=("Arial", 8, "underline"),
+        )
+        repo_link.pack(pady=(0, 10))
+        repo_link.bind("<Button-1>", lambda e: open_repository())
 
     @staticmethod
     def center_window(window: Union[tk.Tk, tk.Toplevel]) -> None:
