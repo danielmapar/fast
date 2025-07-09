@@ -23,6 +23,7 @@ class MainWindow:
         self._hybpiper_frame: Optional[BaseToolFrame] = None
 
         # Hardware monitoring UI elements
+        self._hardware_monitoring_window: Optional[tk.Toplevel] = None
         self._hardware_monitoring_notebook: Optional[ttk.Notebook] = None
         self._cpu_frame: Optional[BaseHardwareMonitoringFrame] = None
         self._memory_frame: Optional[BaseHardwareMonitoringFrame] = None
@@ -32,16 +33,16 @@ class MainWindow:
         # Setup window
         self._setup_window()
 
-        WindowUtils.setup_logo(self._parent)
-
-        self._create_tools_tabs()
-        self._create_hardware_monitoring_tabs()
-
-        WindowUtils.center_window(self._parent)
-
     def _setup_window(self) -> None:
         self._parent.title("Fast App")
         self._parent.configure(bg="#FFFFFF")
+
+        WindowUtils.setup_logo(self._parent)
+
+        self._create_tools_tabs()
+        self._create_hardware_monitoring_button()
+
+        WindowUtils.center_window(self._parent)
 
     def _create_tools_tabs(self) -> None:
         self._tools_notebook = ttk.Notebook(self._parent)
@@ -52,8 +53,46 @@ class MainWindow:
         self._fastp_frame = FastPFrame(self._tools_notebook)
         self._hybpiper_frame = HybPiperFrame(self._tools_notebook)
 
-    def _create_hardware_monitoring_tabs(self) -> None:
-        self._hardware_monitoring_notebook = ttk.Notebook(self._parent)
+    def _create_hardware_monitoring_button(self) -> None:
+        """Create a button to open hardware monitoring in a separate window"""
+        button_frame = tk.Frame(self._parent, bg="#FFFFFF")
+        button_frame.pack(fill="x", padx=10, pady=5)
+
+        hardware_button = tk.Button(
+            button_frame,
+            text="Open Hardware Monitoring",
+            command=self._open_hardware_monitoring_window,
+            bg="#4CAF50",
+            fg="white",
+            font=("Arial", 10, "bold"),
+            padx=20,
+            pady=5,
+        )
+        hardware_button.pack(side="right")
+
+    def _open_hardware_monitoring_window(self) -> None:
+        """Open hardware monitoring in a separate window"""
+        # If window already exists, just bring it to front
+        if (
+            self._hardware_monitoring_window
+            and self._hardware_monitoring_window.winfo_exists()
+        ):
+            self._hardware_monitoring_window.lift()
+            self._hardware_monitoring_window.focus_force()
+            return
+
+        # Create new hardware monitoring window
+        self._hardware_monitoring_window = tk.Toplevel(self._parent)
+        self._hardware_monitoring_window.title("Fast App - Hardware Monitoring")
+        self._hardware_monitoring_window.configure(bg="#FFFFFF")
+
+        # Set window icon (same as main window if available)
+        WindowUtils.setup_logo(self._hardware_monitoring_window)
+
+        # Create notebook for hardware monitoring tabs
+        self._hardware_monitoring_notebook = ttk.Notebook(
+            self._hardware_monitoring_window
+        )
         self._hardware_monitoring_notebook.pack(
             fill="both", expand=True, padx=10, pady=10
         )
@@ -63,3 +102,31 @@ class MainWindow:
         self._memory_frame = MemoryFrame(self._hardware_monitoring_notebook)
         self._hard_drive_frame = HardDriveFrame(self._hardware_monitoring_notebook)
         self._gpu_frame = GPUFrame(self._hardware_monitoring_notebook)
+
+        # Center the hardware monitoring window
+        WindowUtils.center_window(self._hardware_monitoring_window)
+
+        # Handle window closing to clean up resources
+        self._hardware_monitoring_window.protocol(
+            "WM_DELETE_WINDOW", self._on_hardware_window_close
+        )
+
+    def _on_hardware_window_close(self) -> None:
+        """Clean up when hardware monitoring window is closed"""
+        if self._cpu_frame:
+            self._cpu_frame.stop_threaded_updates()
+        if self._memory_frame:
+            self._memory_frame.stop_threaded_updates()
+        if self._gpu_frame:
+            self._gpu_frame.stop_threaded_updates()
+        if self._hard_drive_frame:
+            self._hard_drive_frame.stop_threaded_updates()
+
+        if self._hardware_monitoring_window:
+            self._hardware_monitoring_window.destroy()
+            self._hardware_monitoring_window = None
+            self._hardware_monitoring_notebook = None
+            self._cpu_frame = None
+            self._memory_frame = None
+            self._gpu_frame = None
+            self._hard_drive_frame = None
