@@ -100,6 +100,14 @@ class LibraryDownloader:
             )
             return False
 
+        # Check if HybPiper already exists
+        if os.path.exists(os.path.join(self._conda_path, "envs", "hybpiper")):
+            self._logger.info(
+                "HybPiper already exists at: %s",
+                os.path.join(self._conda_path, "envs", "hybpiper"),
+            )
+            return True
+
         self._logger.info("Detected Linux x64. Setting up HybPiper...")
 
         try:
@@ -112,21 +120,9 @@ class LibraryDownloader:
                     "--add",
                     "channels",
                     "defaults",
-                ]
-            )
-            self._subprocess_manager.run_subprocess(
-                [
-                    os.path.join(self._download_dir, self._conda_path, "bin", "conda"),
-                    "config",
                     "--add",
                     "channels",
                     "bioconda",
-                ]
-            )
-            self._subprocess_manager.run_subprocess(
-                [
-                    os.path.join(self._download_dir, self._conda_path, "bin", "conda"),
-                    "config",
                     "--add",
                     "channels",
                     "conda-forge",
@@ -185,16 +181,16 @@ class LibraryDownloader:
             )
             return False
 
+        # Check if Miniconda already exists
+        if os.path.exists(self._conda_path):
+            self._logger.info("Miniconda already exists at: %s", self._conda_path)
+            return True
+
         self._logger.info("Detected Linux x64. Downloading Miniconda...")
 
         # URL and local filename (download to download directory)
         url = "https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh"
         filename = os.path.join(self._download_dir, f"{self._conda_path}.sh")
-
-        # Check if Miniconda already exists
-        if os.path.exists(self._conda_path):
-            self._logger.info("Miniconda already exists at: %s", self._conda_path)
-            return True
 
         try:
             # Download the file
@@ -261,16 +257,16 @@ class LibraryDownloader:
             )
             return False
 
+        # Check if FastP already exists
+        if os.path.exists(self._fastp_path):
+            self._logger.info("FastP already exists at: %s", self._fastp_path)
+            return True
+
         self._logger.info("Detected Linux x64. Downloading FastP...")
 
         # URL and local filename (download to download directory)
         url = "http://opengene.org/fastp/fastp.1.0.1"
         filename = os.path.join(self._download_dir, "fastp.1.0.1")
-
-        # Check if FastP already exists
-        if os.path.exists(self._fastp_path):
-            self._logger.info("FastP already exists at: %s", self._fastp_path)
-            return True
 
         try:
             # Download the file
@@ -313,17 +309,16 @@ class LibraryDownloader:
                 machine,
             )
             return False
+        # Check if Perl already exists
+        if os.path.exists(self._perl_path):
+            self._logger.info("Perl already exists at: %s", self._perl_path)
+            return True
 
         self._logger.info("Detected Linux x64. Downloading relocatable Perl...")
 
         # URL and local filename (download to download directory)
         url = "https://github.com/skaji/relocatable-perl/releases/latest/download/perl-linux-amd64.tar.xz"
         filename = os.path.join(self._download_dir, "perl-linux-amd64.tar.xz")
-
-        # Check if Perl already exists
-        if os.path.exists(self._perl_path):
-            self._logger.info("Perl already exists at: %s", self._perl_path)
-            return True
 
         try:
             # Download the file
@@ -384,16 +379,16 @@ class LibraryDownloader:
             )
             return False
 
+        # Check if FastQC already exists
+        if os.path.exists(self._fastqc_path):
+            self._logger.info("FastQC already exists at: %s", self._fastqc_path)
+            return True
+
         self._logger.info("Detected Linux x64. Downloading FastQC...")
 
         # URL and local filename (download to download directory)
         url = "https://www.bioinformatics.babraham.ac.uk/projects/fastqc/fastqc_v0.12.1.zip"
         filename = os.path.join(self._download_dir, "fastqc_v0.12.1.zip")
-
-        # Check if FastQC already exists
-        if os.path.exists(self._fastqc_path):
-            self._logger.info("FastQC already exists at: %s", self._fastqc_path)
-            return True
 
         try:
             # Download the file
@@ -445,6 +440,13 @@ class LibraryDownloader:
             )
             return False
 
+        # Check if JDK already exists
+        if os.path.exists(self._jdk_path):
+            self._logger.info(
+                "Amazon Corretto JDK already exists at: %s", self._jdk_path
+            )
+            return True
+
         self._logger.info("Detected Linux x64. Downloading Amazon Corretto JDK...")
 
         # URL and local filename (download to download directory)
@@ -452,13 +454,6 @@ class LibraryDownloader:
         filename = os.path.join(
             self._download_dir, "amazon-corretto-21-x64-linux-jdk.tar.gz"
         )
-
-        # Check if JDK already exists
-        if os.path.exists(self._jdk_path):
-            self._logger.info(
-                "Amazon Corretto JDK already exists at: %s", self._jdk_path
-            )
-            return True
 
         try:
             # Download the file

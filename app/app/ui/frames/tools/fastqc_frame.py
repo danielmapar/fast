@@ -1,5 +1,5 @@
 import os
-import time  # Add time import
+import time
 import tkinter as tk
 import tkinter.ttk as ttk
 from tkinter import filedialog, messagebox
@@ -676,14 +676,6 @@ class FastQCFrame(BaseFrame):
                 self._log_monitor_panel.toggle_content()
             else:
                 self._log_monitor_panel.toggle_content()
-
-            # # Log file monitor
-            # if self._log_monitor_panel:
-            #     if running:
-            #         self._log_monitor_panel.pack(fill=tk.BOTH, expand=True, padx=10, pady=5, after=self.progress_bar)
-            #         self._log_monitor_panel.toggle_content()
-            #     else:
-            #         self._log_monitor_panel.pack_forget()
 
     def _format_elapsed_time(self, elapsed_seconds: float) -> str:
         """Format elapsed time as minutes and seconds"""
