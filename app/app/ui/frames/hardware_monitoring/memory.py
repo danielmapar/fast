@@ -38,7 +38,6 @@ class MemoryFrame(BaseFrame):
     # Configuration constants
     UPDATE_INTERVAL = 1000
     PROGRESS_BAR_LENGTH = 200
-    PROCESS_TABLE_HEIGHT = 8
     MAX_PROCESS_NAME_LENGTH = 20
     TOP_PROCESS_COUNT = 10
     BYTES_TO_GB = 1024**3
@@ -74,7 +73,6 @@ class MemoryFrame(BaseFrame):
 
         self._check_swap_availability()
         self._create_memory_overview_section()
-        self._create_process_table_section()
         self._create_virtual_memory_section()
         self._create_swap_memory_section()
 
@@ -89,7 +87,6 @@ class MemoryFrame(BaseFrame):
         try:
             self._update_memory_stats(data.get("virtual_memory"))
             self._update_swap_stats(data.get("swap_memory"))
-            self._update_process_table(data.get("top_processes", []))
         except Exception as e:
             self.logger.error(f"Error updating memory UI: {e}")
 
@@ -153,37 +150,6 @@ class MemoryFrame(BaseFrame):
 
         for label, key in memory_fields:
             self._create_info_row(info_frame, label, key, "0 GB")
-
-    def _create_process_table_section(self) -> None:
-        """Create the top memory consuming processes table."""
-        frame = self._create_section("Top Memory Processes")
-
-        # Process table
-        columns = ("PID", "Name", "Memory%", "Memory MB", "Status")
-        tree = ttk.Treeview(
-            frame, columns=columns, show="headings", height=self.PROCESS_TABLE_HEIGHT
-        )
-
-        # Configure columns with appropriate widths
-        column_widths = {
-            "PID": 80,
-            "Name": 150,
-            "Memory%": 100,
-            "Memory MB": 120,
-            "Status": 100,
-        }
-        for col in columns:
-            tree.heading(col, text=col)
-            tree.column(col, width=column_widths.get(col, 100), minwidth=50)
-
-        # Add scrollbar for table
-        scrollbar = ttk.Scrollbar(frame, orient="vertical", command=tree.yview)
-        tree.configure(yscrollcommand=scrollbar.set)
-
-        tree.pack(side="left", fill="both", expand=True, padx=10, pady=10)
-        scrollbar.pack(side="right", fill="y", pady=10)
-
-        self._widgets["process_table"] = tree
 
     def _create_virtual_memory_section(self) -> None:
         """Create virtual memory details section - platform aware."""
@@ -471,28 +437,6 @@ class MemoryFrame(BaseFrame):
                     self._widgets["swap_status"].config(
                         text="Not Configured", fg="orange"
                     )
-
-    def _update_process_table(self, processes: List[ProcessInfo]) -> None:
-        """Update the process table with top memory consumers."""
-        tree = self._widgets.get("process_table")
-        if not tree:
-            return
-
-        # Clear and repopulate
-        tree.delete(*tree.get_children())
-
-        for process in processes:
-            tree.insert(
-                "",
-                "end",
-                values=(
-                    process.pid,
-                    process.name,
-                    f"{process.memory_percent:.1f}%",
-                    f"{process.memory_mb:.1f}",
-                    process.status,
-                ),
-            )
 
     def _get_usage_color(self, percentage: float) -> str:
         """Get color based on memory usage percentage."""

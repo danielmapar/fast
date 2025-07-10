@@ -15,6 +15,7 @@ class CPUFrame(BaseFrame):
 
     UPDATE_INTERVAL = 1000
     TOP_PROCESS_COUNT = 10
+    PROCESS_TABLE_HEIGHT = 8
     MAX_PROCESS_NAME_LENGTH = 20
 
     def __init__(self, notebook: ttk.Notebook) -> None:
@@ -179,7 +180,10 @@ class CPUFrame(BaseFrame):
         # Process tree with scrollbar
         columns = ("PID", "Name", "CPU%", "Memory%")
         self.process_tree = ttk.Treeview(
-            tree_container, columns=columns, show="headings", height=8
+            tree_container,
+            columns=columns,
+            show="headings",
+            height=self.PROCESS_TABLE_HEIGHT,
         )
 
         for col in columns:
