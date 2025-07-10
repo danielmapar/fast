@@ -1638,6 +1638,10 @@ class FastPFrame(BaseFrame):
         if self.fix_mgi_id_var.get():
             command.append("--fix_mgi_id")
 
+        # Verbose output
+        if self.verbose_var.get():
+            command.append("--verbose")
+
         # Advanced adapter options
         if self.adapter_fasta_var.get():
             command.extend(["--adapter_fasta", self.adapter_fasta_var.get()])
