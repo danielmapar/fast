@@ -25,8 +25,7 @@ class HardDriveFrame(BaseFrame):
         self._widgets: Dict[str, Any] = {}
 
         self.is_windows = platform.system() == "Windows"
-        self.is_linux = platform.system() == "Linux"
-        self.is_macos = platform.system() == "Darwin"
+
         self.UPDATE_INTERVAL = (
             self.UPDATE_INTERVAL * 2 if self.is_windows else self.UPDATE_INTERVAL
         )

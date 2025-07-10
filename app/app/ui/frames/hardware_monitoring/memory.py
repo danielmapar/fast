@@ -1,35 +1,12 @@
 import platform
 import tkinter as tk
 import tkinter.ttk as ttk
-from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Union, override
+from typing import Any, Dict, Optional, Union, override
 
 import psutil
 
 from app.logger.config import Logger, LogType
 from app.ui.frames.base_frame import BaseFrame
-
-
-@dataclass
-class MemoryStats:
-    """Data container for memory statistics."""
-
-    total: float
-    available: float
-    used: float
-    free: float
-    percent: float
-
-
-@dataclass
-class ProcessInfo:
-    """Data container for process information."""
-
-    pid: int
-    name: str
-    memory_percent: float
-    memory_mb: float
-    status: str
 
 
 class MemoryFrame(BaseFrame):
@@ -52,7 +29,6 @@ class MemoryFrame(BaseFrame):
     def __init__(self, notebook: ttk.Notebook) -> None:
         self.logger = Logger().get_logger(LogType.MEMORY_MONITORING)
         self._widgets: Dict[str, Any] = {}
-        self._previous_values: Dict[str, Any] = {}
         self._swap_available = False
 
         # Platform-specific optimizations
@@ -105,7 +81,6 @@ class MemoryFrame(BaseFrame):
         try:
             data = {
                 "virtual_memory": psutil.virtual_memory(),
-                "top_processes": self._get_top_processes(),
             }
 
             # Always try to collect swap data
@@ -295,52 +270,6 @@ class MemoryFrame(BaseFrame):
             row, text=initial_value, font=("Arial", 10, "bold")
         )
         self._widgets[key].pack(side=tk.RIGHT)
-
-    def _get_top_processes(self) -> List[ProcessInfo]:
-        """Get top memory consuming processes."""
-        processes = []
-
-        try:
-            for proc in psutil.process_iter(
-                ["pid", "name", "memory_percent", "memory_info", "status"]
-            ):
-                try:
-                    info = proc.info
-                    if not info or info.get("memory_percent") is None:
-                        continue
-
-                    memory_mb = 0
-                    if info.get("memory_info"):
-                        memory_mb = info["memory_info"].rss / (1024 * 1024)
-
-                    process_info = ProcessInfo(
-                        pid=info.get("pid", 0),
-                        name=(info.get("name") or "Unknown")[
-                            : self.MAX_PROCESS_NAME_LENGTH
-                        ],
-                        memory_percent=info.get("memory_percent", 0) or 0,
-                        memory_mb=memory_mb,
-                        status=(info.get("status", "Unknown"))[:10],
-                    )
-                    processes.append(process_info)
-
-                except (
-                    psutil.NoSuchProcess,
-                    psutil.AccessDenied,
-                    psutil.ZombieProcess,
-                ):
-                    continue
-
-                # Performance limit
-                if len(processes) > 200:
-                    break
-
-        except Exception as e:
-            self.logger.error(f"Error getting processes: {e}")
-
-        return sorted(processes, key=lambda x: x.memory_percent, reverse=True)[
-            : self.TOP_PROCESS_COUNT
-        ]
 
     def _update_memory_stats(self, vm_data) -> None:
         """Update virtual memory statistics with platform awareness."""

@@ -15,9 +15,6 @@ class FastQCFrame(BaseFrame):
     def __init__(self, notebook: ttk.Notebook) -> None:
         self._library_manager = LibraryManager()
 
-        # Track focusable widgets
-        self._focusable_widgets: List[tk.Widget] = []
-
         # UI Variables
         self.input_files: List[str] = []
         self.output_dir = tk.StringVar()
@@ -37,9 +34,6 @@ class FastQCFrame(BaseFrame):
         self.status_label: Optional[tk.Label] = None
 
         super().__init__(notebook, "FastQC")
-
-    def testasdasd(self):
-        print("test")
 
     @override
     def setup_frame(self) -> None:

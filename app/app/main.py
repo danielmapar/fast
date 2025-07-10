@@ -12,9 +12,5 @@ def run_app() -> None:
     app.mainloop()
 
 
-def main() -> None:
-    run_app()
-
-
 if __name__ == "__main__":
     run_app()

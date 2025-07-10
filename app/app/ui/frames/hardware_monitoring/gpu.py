@@ -16,7 +16,6 @@ class GPUMetrics:
     """GPU metrics data structure"""
 
     gpu_util: int = 0
-    memory_util: int = 0
     memory_total: int = 0
     memory_used: int = 0
     memory_free: int = 0
@@ -66,10 +65,8 @@ class GPUFrame(BaseFrame):
         self._widgets: Dict[str, tk.Label] = {}
         self._gpu_widgets: List[Dict[str, Any]] = []
 
-        # Platform-specific optimizations
         self.is_windows = platform.system() == "Windows"
-        self.is_linux = platform.system() == "Linux"
-        self.is_macos = platform.system() == "Darwin"
+
         self.UPDATE_INTERVAL = (
             self.UPDATE_INTERVAL * 2 if self.is_windows else self.UPDATE_INTERVAL
         )
@@ -494,7 +491,6 @@ class GPUFrame(BaseFrame):
 
             return GPUMetrics(
                 gpu_util=util.gpu,
-                memory_util=util.memory,
                 memory_total=mem_info.total,
                 memory_used=mem_info.used,
                 memory_free=mem_info.free,

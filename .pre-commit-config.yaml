@@ -63,5 +63,5 @@ repos:
     rev: v2.11
     hooks:
       - id: vulture
-        args: [app/app/, --min-confidence, "60"]
+        args: [app/app/, --min-confidence, "80"]
         pass_filenames: false

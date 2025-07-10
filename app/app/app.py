@@ -16,7 +16,7 @@ class App(tk.Tk):
             self._present_error_message(str(e))
 
     def _show_loading_screen(self) -> None:
-        self.loading_screen = SetupWindow(
+        self.loading_screen = SetupWindow(  # vulture: disable=unused-attribute
             parent=self,
             on_success_install_libraries_callback=self._on_success_install_libraries,
             on_error_install_libraries_callback=self._on_error_install_libraries,
@@ -27,7 +27,7 @@ class App(tk.Tk):
 
     def _on_success_test_libraries(self) -> None:
         self.deiconify()  # Show main window
-        self.main_window = MainWindow(self)
+        self.main_window = MainWindow(self)  # vulture: disable=unused-attribute
 
     def _on_error_test_libraries(self, error: str) -> None:
         self._present_error_message(error)

@@ -6,7 +6,7 @@ authors = ["Daniel Marchena Parreira <danielmapar@gmail.com>"]
 readme = "README.md"
 
 [tool.poetry.scripts]
-fast-app = "app.main:main"
+fast-app = "app.main:run_app"
 
 [tool.poetry.dependencies]
 python = ">=3.13,<3.14"
@@ -20,10 +20,6 @@ nvidia-ml-py = "^12.575.51"
 pytest = "^8.3.4"
 pyinstaller = "^6.14.1"
 types-requests = "^2.32.4.20250611"
-
-[tool.vulture]
-min_confidence = 60
-verbose = true
 
 [build-system]
 requires = ["poetry-core"]

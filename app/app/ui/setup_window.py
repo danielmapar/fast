@@ -23,7 +23,6 @@ class SetupWindow:
 
         # UI elements
         self._status_label: Optional[tk.Label] = None
-        self._logo: Optional[tk.Label] = None
         self._progress_bar: Optional[ttk.Progressbar] = None
         self._window: Optional[tk.Toplevel] = None
         self._log_monitor_panel: Optional[LogFileMonitor] = None
