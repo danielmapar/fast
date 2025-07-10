@@ -1,4 +1,5 @@
 import os
+from typing import List
 
 from app.logger.config import Logger, LogType
 from app.subprocess.manager import SubprocessManager
@@ -23,8 +24,12 @@ class LibraryRunner:
 
         # Loggers
         self._logger_testing_libraries = Logger().get_logger(LogType.TESTING_LIBRARIES)
-        self._subprocess_manager: SubprocessManager = SubprocessManager(
-            self._logger_testing_libraries
+        self._logger_fastqc = Logger().get_logger(LogType.FASTQC)
+        self._subprocess_manager_testing_libraries: SubprocessManager = (
+            SubprocessManager(self._logger_testing_libraries)
+        )
+        self._subprocess_manager_fastqc: SubprocessManager = SubprocessManager(
+            self._logger_fastqc
         )
 
     def test_all_libraries(self) -> bool:
@@ -41,7 +46,7 @@ class LibraryRunner:
             "------------------------------------------"
         )
 
-        if not self.test_jdk_installation():
+        if not self._test_jdk_installation():
             raise Exception("Failed to test JDK installation")
         if not self._test_fastqc_installation():
             raise Exception("Failed to test FastQC installation")
@@ -69,7 +74,7 @@ class LibraryRunner:
         Test if the HybPiper installation is working by running hybpiper --version
         """
         try:
-            self._subprocess_manager.run_subprocess(
+            self._subprocess_manager_testing_libraries.run_subprocess(
                 [
                     os.path.join(self._conda_path, "bin", "conda"),
                     "run",
@@ -99,7 +104,9 @@ class LibraryRunner:
             return False
 
         try:
-            result = self._subprocess_manager.run_subprocess([fastp_executable, "-v"])
+            result = self._subprocess_manager_testing_libraries.run_subprocess(
+                [fastp_executable, "-v"]
+            )
 
             if result.returncode == 0:
                 if self._logger_testing_libraries:
@@ -138,7 +145,9 @@ class LibraryRunner:
             return False
 
         try:
-            result = self._subprocess_manager.run_subprocess([perl_executable, "-v"])
+            result = self._subprocess_manager_testing_libraries.run_subprocess(
+                [perl_executable, "-v"]
+            )
 
             if result.returncode == 0:
                 if self._logger_testing_libraries:
@@ -204,7 +213,7 @@ class LibraryRunner:
                     f"Running fastqc -v command: {" ".join(command)}"
                 )
             # Run fastqc -v command
-            result = self._subprocess_manager.run_subprocess(command)
+            result = self._subprocess_manager_testing_libraries.run_subprocess(command)
 
             if result.returncode == 0:
                 # Extract version info from stderr (fastqc -v outputs to stderr)
@@ -233,7 +242,7 @@ class LibraryRunner:
                 )
             return False
 
-    def test_jdk_installation(self) -> bool:
+    def _test_jdk_installation(self) -> bool:
         """
         Test if the JDK installation is working by running java -version
         """
@@ -249,7 +258,7 @@ class LibraryRunner:
 
         try:
             # Run java -version command
-            result = self._subprocess_manager.run_subprocess(
+            result = self._subprocess_manager_testing_libraries.run_subprocess(
                 [java_executable, "-version"]
             )
 
@@ -280,3 +289,46 @@ class LibraryRunner:
                     f"Error testing JDK installation: {e}"
                 )
             return False
+
+    def run_fastqc_command(self, commands: List[str]) -> None:
+        """
+        Run FastQC command with the given arguments
+
+        Args:
+            commands: List of command line arguments for FastQC
+        """
+        # Set up paths
+        fastqc_executable = os.path.join(self._fastqc_path, "FastQC", "fastqc")
+        perl_executable = os.path.join(self._perl_path, "bin", "perl")
+        jdk_executable = os.path.join(self._jdk_path, "bin", "java")
+
+        # Verify executables exist
+        if not os.path.exists(fastqc_executable):
+            raise FileNotFoundError(
+                f"FastQC executable not found at: {fastqc_executable}"
+            )
+
+        if not os.path.exists(perl_executable):
+            raise FileNotFoundError(f"Perl executable not found at: {perl_executable}")
+
+        if not os.path.exists(jdk_executable):
+            raise FileNotFoundError(f"Java executable not found at: {jdk_executable}")
+
+        # Build the full command
+        full_command = [perl_executable, fastqc_executable, "--java", jdk_executable]
+        full_command.extend(commands)
+
+        self._logger_fastqc.info(f"Running FastQC command: {' '.join(full_command)}")
+
+        # Run the command
+        result = self._subprocess_manager_fastqc.run_subprocess(full_command)
+
+        if result.returncode != 0:
+            self._logger_fastqc.error(
+                f"FastQC failed with return code {result.returncode}: {result.stderr}"
+            )
+            raise Exception(
+                f"FastQC failed with return code {result.returncode}: {result.stderr}"
+            )
+        else:
+            self._logger_fastqc.info("FastQC command completed successfully")

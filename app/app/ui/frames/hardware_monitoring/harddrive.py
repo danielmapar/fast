@@ -35,12 +35,12 @@ class HardDriveFrame(BaseFrame):
     @override
     def setup_frame(self) -> None:
         """Setup the Hard Drive monitoring interface."""
-        main_frame = tk.Frame(self.get_scrollable_container())
-        main_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        self.main_frame = tk.Frame(self.get_scrollable_container())
+        self.main_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
 
-        self._create_storage_summary(main_frame)
-        self._create_partitions_table(main_frame)
-        self._create_disk_io_stats(main_frame)
+        self._create_storage_summary()
+        self._create_partitions_table()
+        self._create_disk_io_stats()
 
         self.start_threaded_updates(self.UPDATE_INTERVAL)
 
@@ -80,9 +80,9 @@ class HardDriveFrame(BaseFrame):
         except Exception as e:
             self.logger.error(f"Error updating disk UI: {e}")
 
-    def _create_storage_summary(self, parent: tk.Widget) -> None:
+    def _create_storage_summary(self) -> None:
         """Create overall storage summary section."""
-        frame = self._create_section_frame(parent, "Storage Summary")
+        frame = self._create_section_frame(self.main_frame, "Storage Summary")
 
         # Summary statistics in a grid
         stats_frame = tk.Frame(frame)
@@ -109,9 +109,9 @@ class HardDriveFrame(BaseFrame):
         )
         self._widgets["usage_bar"].pack(fill=tk.X, padx=10, pady=(0, 10))
 
-    def _create_partitions_table(self, parent: tk.Widget) -> None:
+    def _create_partitions_table(self) -> None:
         """Create partitions overview table."""
-        frame = self._create_section_frame(parent, "Disk Partitions")
+        frame = self._create_section_frame(self.main_frame, "Disk Partitions")
 
         # Create treeview with scrollbar
         tree_frame = tk.Frame(frame)
@@ -134,9 +134,9 @@ class HardDriveFrame(BaseFrame):
 
         self._widgets["partitions_tree"] = tree
 
-    def _create_disk_io_stats(self, parent: tk.Widget) -> None:
+    def _create_disk_io_stats(self) -> None:
         """Create disk I/O statistics section."""
-        frame = self._create_section_frame(parent, "Disk I/O Statistics")
+        frame = self._create_section_frame(self.main_frame, "Disk I/O Statistics")
 
         stats_frame = tk.Frame(frame)
         stats_frame.pack(fill=tk.X, padx=10, pady=10)

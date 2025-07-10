@@ -3,6 +3,7 @@
 .vscode/
 .idea/
 .mypy_cache/
+.ruff_cache/
 app/dist/
 app/build/
 app/app.egg-info/

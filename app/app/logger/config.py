@@ -13,6 +13,9 @@ class LogType(Enum):
     MEMORY_MONITORING = "memory_monitoring"
     HARDDRIVE_MONITORING = "harddrive_monitoring"
     GPU_MONITORING = "gpu_monitoring"
+    FASTQC = "fastqc"
+    FASTP = "fastp"
+    HYBPIPER = "hybpiper"
 
 
 class Logger:
@@ -60,6 +63,9 @@ class Logger:
             LogType.GPU_MONITORING.value: self._create_logger(
                 LogType.GPU_MONITORING.value
             ),
+            LogType.FASTQC.value: self._create_logger(LogType.FASTQC.value),
+            LogType.FASTP.value: self._create_logger(LogType.FASTP.value),
+            LogType.HYBPIPER.value: self._create_logger(LogType.HYBPIPER.value),
         }
 
     def _create_logger(

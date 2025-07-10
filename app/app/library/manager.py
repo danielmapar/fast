@@ -8,8 +8,19 @@ from app.library.runner import LibraryRunner
 
 
 class LibraryManager:
+    _instance: Optional["LibraryManager"] = None
+    _initialized: bool = False
+
+    def __new__(cls) -> "LibraryManager":
+        if cls._instance is None:
+            cls._instance = super(LibraryManager, cls).__new__(cls)
+        return cls._instance
 
     def __init__(self) -> None:
+        # Only initialize once
+        if LibraryManager._initialized:
+            return
+
         download_dir_env: Optional[str] = os.getenv("DOWNLOAD_DIR")
         if download_dir_env is None:
             raise ValueError("DOWNLOAD_DIR environment variable is not set")
@@ -69,6 +80,9 @@ class LibraryManager:
                 "Please check your internet connection and try again."
             )
 
+        # Mark as initialized
+        LibraryManager._initialized = True
+
     def is_user_connected_to_internet(self) -> bool:
         try:
             response = requests.get("https://www.google.com", timeout=5)
@@ -95,46 +109,4 @@ class LibraryManager:
             raise Exception(f"Error while testing library installations: {e}")
 
     def run_fastqc_command(self, commands: List[str]) -> None:
-        """
-        Run FastQC command with the given arguments
-
-        Args:
-            commands: List of command line arguments for FastQC
-        """
-        # Set up paths
-        fastqc_executable = os.path.join(self.fastqc_path, "FastQC", "fastqc")
-        perl_executable = os.path.join(self.perl_path, "bin", "perl")
-        jdk_executable = os.path.join(self.jdk_path, "bin", "java")
-
-        # Verify executables exist
-        if not os.path.exists(fastqc_executable):
-            raise FileNotFoundError(
-                f"FastQC executable not found at: {fastqc_executable}"
-            )
-
-        if not os.path.exists(perl_executable):
-            raise FileNotFoundError(f"Perl executable not found at: {perl_executable}")
-
-        if not os.path.exists(jdk_executable):
-            raise FileNotFoundError(f"Java executable not found at: {jdk_executable}")
-
-        # Build the full command
-        full_command = [perl_executable, fastqc_executable, "--java", jdk_executable]
-        full_command.extend(commands)
-
-        # Create subprocess manager with appropriate logger
-        from app.logger.config import Logger, LogType
-        from app.subprocess.manager import SubprocessManager
-
-        logger = Logger().get_logger(
-            LogType.TESTING_LIBRARIES
-        )  # We could create a specific logger for FastQC
-        subprocess_manager = SubprocessManager(logger)
-
-        # Run the command
-        result = subprocess_manager.run_subprocess(full_command)
-
-        if result.returncode != 0:
-            raise RuntimeError(
-                f"FastQC failed with return code {result.returncode}: {result.stderr}"
-            )
+        self.library_runner.run_fastqc_command(commands)

@@ -1,4 +1,5 @@
 import os
+import time  # Add time import
 import tkinter as tk
 import tkinter.ttk as ttk
 from tkinter import filedialog, messagebox
@@ -27,6 +28,17 @@ class FastQCFrame(BaseFrame):
         self.quiet_var = tk.BooleanVar(value=False)
         self.contaminants_file = tk.StringVar()
 
+        # New missing options
+        self.min_length_var = tk.StringVar(value="")  # --min-length
+        self.dup_length_var = tk.StringVar(value="50")  # --dup_length (default 50)
+        self.memory_var = tk.StringVar(value="")  # --memory
+        self.svg_var = tk.BooleanVar(value=False)  # --svg
+        self.limits_file = tk.StringVar()  # --limits
+        self.adapters_file = tk.StringVar()  # --adapters
+
+        # Timing variable
+        self.start_time: Optional[float] = None
+
         # UI Elements
         self.files_listbox: Optional[tk.Listbox] = None
         self.run_button: Optional[tk.Button] = None
@@ -38,59 +50,23 @@ class FastQCFrame(BaseFrame):
     @override
     def setup_frame(self) -> None:
         # Main content with padding
-        main_frame = tk.Frame(self.get_scrollable_container())
-        main_frame.pack(fill="both", expand=True, padx=20, pady=15)
+        self.main_frame = tk.Frame(self.get_scrollable_container())
+        self.main_frame.pack(fill="both", expand=True, padx=20, pady=15)
 
         # Title
         title_text = "FastQC - Quality Control Analysis"
-        title_label = tk.Label(main_frame, text=title_text, font=("Arial", 12, "bold"))
+        title_label = tk.Label(
+            self.main_frame, text=title_text, font=("Arial", 12, "bold")
+        )
         title_label.pack(pady=(0, 20))
 
         # Create all sections
-        self._create_input_files_section(main_frame)
-        self._create_output_section(main_frame)
-        self._create_options_section(main_frame)
-        self._create_advanced_options_section(main_frame)
-        self._create_run_section(main_frame)
-
-        # Bind focus removal to all non-input widgets
-        # self._bind_focus_removal(main_frame)
-        # self._bind_focus_removal(container)
-
-    def _remove_focus(self, event=None):
-        """Remove focus from any focused widget when clicking on non-input areas"""
-        if not event:
-            return
-
-        clicked_widget = event.widget
-        widget_class = clicked_widget.winfo_class()
-
-        # List of widgets that should keep focus when clicked
-        input_widgets = ["Entry", "Spinbox", "TCombobox", "Listbox", "Text", "Button"]
-
-        if widget_class not in input_widgets:
-            # Remove focus by setting it to the main frame
-            self._frame.focus_set()
-            return "break"  # Prevent event propagation
-
-    def _bind_focus_removal(self, widget):
-        """Bind focus removal to a widget and its children"""
-        widget.bind("<Button-1>", self._remove_focus)
-
-        # Recursively bind to all children
-        for child in widget.winfo_children():
-            child_class = child.winfo_class()
-            # Don't bind to input widgets as they need to maintain focus
-            if child_class not in [
-                "Entry",
-                "Spinbox",
-                "TCombobox",
-                "Listbox",
-                "Text",
-                "Button",
-                "Checkbutton",  # Add Checkbutton to exclusion list
-            ]:
-                self._bind_focus_removal(child)
+        self._create_input_files_section()
+        self._create_output_section()
+        self._create_options_section()
+        self._create_advanced_options_section()
+        self._create_performance_options_section()
+        self._create_run_section()
 
     def _detect_cpu_cores(self) -> int:
         """Detect the number of available CPU cores"""
@@ -108,11 +84,13 @@ class FastQCFrame(BaseFrame):
             return cores
 
         # Ultimate fallback
-        return 2
+        return 1
 
-    def _create_input_files_section(self, parent: tk.Widget) -> None:
+    def _create_input_files_section(self) -> None:
         """Create the input files selection section"""
-        files_frame = tk.LabelFrame(parent, text="Input Files", padx=15, pady=10)
+        files_frame = tk.LabelFrame(
+            self.main_frame, text="Input Files", padx=15, pady=10
+        )
         files_frame.pack(fill="both", expand=True, pady=(0, 15))
 
         # Instructions
@@ -183,9 +161,11 @@ class FastQCFrame(BaseFrame):
             pady=5,
         ).pack()
 
-    def _create_output_section(self, parent: tk.Widget) -> None:
+    def _create_output_section(self) -> None:
         """Create the output directory selection section"""
-        output_frame = tk.LabelFrame(parent, text="Output Directory", padx=15, pady=10)
+        output_frame = tk.LabelFrame(
+            self.main_frame, text="Output Directory", padx=15, pady=10
+        )
         output_frame.pack(fill="x", pady=(0, 15))
 
         dir_frame = tk.Frame(output_frame)
@@ -205,9 +185,11 @@ class FastQCFrame(BaseFrame):
             side="left", padx=(10, 10), fill="x", expand=True
         )
 
-    def _create_options_section(self, parent: tk.Widget) -> None:
+    def _create_options_section(self) -> None:
         """Create the basic options section"""
-        options_frame = tk.LabelFrame(parent, text="Basic Options", padx=15, pady=10)
+        options_frame = tk.LabelFrame(
+            self.main_frame, text="Basic Options", padx=15, pady=10
+        )
         options_frame.pack(fill="x", pady=(0, 15))
 
         # Format selection row
@@ -247,10 +229,10 @@ class FastQCFrame(BaseFrame):
             variable=self.extract_var,
         ).pack(anchor="w")
 
-    def _create_advanced_options_section(self, parent: tk.Widget) -> None:
+    def _create_advanced_options_section(self) -> None:
         """Create the advanced options section"""
         advanced_frame = tk.LabelFrame(
-            parent, text="Advanced Options", padx=15, pady=10
+            self.main_frame, text="Advanced Options", padx=15, pady=10
         )
         advanced_frame.pack(fill="x", pady=(0, 15))
 
@@ -263,6 +245,44 @@ class FastQCFrame(BaseFrame):
         )
         tk.Spinbox(
             kmers_frame, from_=2, to=10, textvariable=self.kmers_var, width=10
+        ).pack(side="left", padx=(10, 0))
+
+        # Minimum sequence length row
+        min_length_frame = tk.Frame(advanced_frame)
+        min_length_frame.pack(fill="x", pady=(0, 10))
+
+        tk.Label(min_length_frame, text="Min Length:", width=15, anchor="w").pack(
+            side="left"
+        )
+        tk.Entry(min_length_frame, textvariable=self.min_length_var, width=10).pack(
+            side="left", padx=(10, 0)
+        )
+        tk.Label(
+            min_length_frame,
+            text="(leave empty for no filter)",
+            font=("Arial", 8),
+            fg="gray",
+        ).pack(side="left", padx=(10, 0))
+
+        # Duplication length row
+        dup_length_frame = tk.Frame(advanced_frame)
+        dup_length_frame.pack(fill="x", pady=(0, 10))
+
+        tk.Label(dup_length_frame, text="Dup Length:", width=15, anchor="w").pack(
+            side="left"
+        )
+        tk.Spinbox(
+            dup_length_frame,
+            from_=10,
+            to=200,
+            textvariable=self.dup_length_var,
+            width=10,
+        ).pack(side="left", padx=(10, 0))
+        tk.Label(
+            dup_length_frame,
+            text="(sequence truncation for duplication)",
+            font=("Arial", 8),
+            fg="gray",
         ).pack(side="left", padx=(10, 0))
 
         # Contaminants file row
@@ -279,6 +299,34 @@ class FastQCFrame(BaseFrame):
             contam_frame, text="Browse", command=self._browse_contaminants_file, padx=15
         ).pack(side="right")
 
+        # Adapters file row
+        adapters_frame = tk.Frame(advanced_frame)
+        adapters_frame.pack(fill="x", pady=(0, 10))
+
+        tk.Label(adapters_frame, text="Adapters File:", width=15, anchor="w").pack(
+            side="left"
+        )
+        tk.Entry(adapters_frame, textvariable=self.adapters_file).pack(
+            side="left", padx=(10, 10), fill="x", expand=True
+        )
+        tk.Button(
+            adapters_frame, text="Browse", command=self._browse_adapters_file, padx=15
+        ).pack(side="right")
+
+        # Limits file row
+        limits_frame = tk.Frame(advanced_frame)
+        limits_frame.pack(fill="x", pady=(0, 10))
+
+        tk.Label(limits_frame, text="Limits File:", width=15, anchor="w").pack(
+            side="left"
+        )
+        tk.Entry(limits_frame, textvariable=self.limits_file).pack(
+            side="left", padx=(10, 10), fill="x", expand=True
+        )
+        tk.Button(
+            limits_frame, text="Browse", command=self._browse_limits_file, padx=15
+        ).pack(side="right")
+
         # Boolean options in a grid
         options_grid = tk.Frame(advanced_frame)
         options_grid.pack(fill="x")
@@ -293,11 +341,36 @@ class FastQCFrame(BaseFrame):
 
         tk.Checkbutton(
             options_grid, text="Quiet mode (--quiet)", variable=self.quiet_var
-        ).grid(row=1, column=0, sticky="w", columnspan=2)
+        ).grid(row=1, column=0, sticky="w", padx=(0, 30))
 
-    def _create_run_section(self, parent: tk.Widget) -> None:
+        tk.Checkbutton(
+            options_grid, text="Generate SVG graphs (--svg)", variable=self.svg_var
+        ).grid(row=1, column=1, sticky="w", padx=(0, 30))
+
+    def _create_performance_options_section(self) -> None:
+        """Create the performance options section"""
+        perf_frame = tk.LabelFrame(
+            self.main_frame, text="Performance Options", padx=15, pady=10
+        )
+        perf_frame.pack(fill="x", pady=(0, 15))
+
+        # Memory allocation row
+        memory_frame = tk.Frame(perf_frame)
+        memory_frame.pack(fill="x", pady=(0, 10))
+
+        tk.Label(memory_frame, text="Memory (MB):", width=15, anchor="w").pack(
+            side="left"
+        )
+        tk.Entry(memory_frame, textvariable=self.memory_var, width=10).pack(
+            side="left", padx=(10, 0)
+        )
+        tk.Label(
+            memory_frame, text="(leave empty for auto)", font=("Arial", 8), fg="gray"
+        ).pack(side="left", padx=(10, 0))
+
+    def _create_run_section(self) -> None:
         """Create the run section with status and progress"""
-        run_frame = tk.Frame(parent)
+        run_frame = tk.Frame(self.main_frame)
         run_frame.pack(fill="x", pady=(15, 0))
 
         # Status label
@@ -312,6 +385,7 @@ class FastQCFrame(BaseFrame):
         # Progress bar
         self.progress_bar = ttk.Progressbar(run_frame, mode="indeterminate")
         self.progress_bar.pack(fill="x", pady=(0, 15))
+        self.progress_bar.pack_forget()
 
         # Run button
         self.run_button = tk.Button(
@@ -411,6 +485,24 @@ class FastQCFrame(BaseFrame):
         if file:
             self.contaminants_file.set(file)
 
+    def _browse_adapters_file(self) -> None:
+        """Browse for adapters file"""
+        file = filedialog.askopenfilename(
+            title="Select adapters file",
+            filetypes=[("Text files", "*.txt"), ("All files", "*.*")],
+        )
+        if file:
+            self.adapters_file.set(file)
+
+    def _browse_limits_file(self) -> None:
+        """Browse for limits file"""
+        file = filedialog.askopenfilename(
+            title="Select limits file",
+            filetypes=[("Text files", "*.txt"), ("All files", "*.*")],
+        )
+        if file:
+            self.limits_file.set(file)
+
     def _update_status(self) -> None:
         """Update the status label based on current state"""
         if not self.status_label:
@@ -446,7 +538,6 @@ class FastQCFrame(BaseFrame):
 
         # Extract option
         if not self.extract_var.get():
-            print("No extract")
             command.append("--noextract")
 
         # K-mers
@@ -454,9 +545,38 @@ class FastQCFrame(BaseFrame):
         if kmers != 5:
             command.extend(["-k", str(kmers)])
 
+        # Minimum length filter
+        if self.min_length_var.get().strip():
+            try:
+                min_length = int(self.min_length_var.get())
+                command.extend(["--min-length", str(min_length)])
+            except ValueError:
+                pass  # Skip if invalid integer
+
+        # Duplication length
+        dup_length = int(self.dup_length_var.get())
+        if dup_length != 50:  # Only add if different from default
+            command.extend(["--dup_length", str(dup_length)])
+
+        # Memory allocation
+        if self.memory_var.get().strip():
+            try:
+                memory = int(self.memory_var.get())
+                command.extend(["--memory", str(memory)])
+            except ValueError:
+                pass  # Skip if invalid integer
+
         # Contaminants file
         if self.contaminants_file.get():
             command.extend(["-c", self.contaminants_file.get()])
+
+        # Adapters file
+        if self.adapters_file.get():
+            command.extend(["--adapters", self.adapters_file.get()])
+
+        # Limits file
+        if self.limits_file.get():
+            command.extend(["--limits", self.limits_file.get()])
 
         # Boolean options
         if self.nogroup_var.get():
@@ -467,6 +587,9 @@ class FastQCFrame(BaseFrame):
 
         if self.quiet_var.get():
             command.append("--quiet")
+
+        if self.svg_var.get():
+            command.append("--svg")
 
         # Add input files
         command.extend(self.input_files)
@@ -495,6 +618,9 @@ class FastQCFrame(BaseFrame):
             # Build command
             command = self._build_fastqc_command()
 
+            # Record start time
+            self.start_time = time.time()
+
             # Update UI for running state
             self._set_running_state(True)
 
@@ -518,26 +644,53 @@ class FastQCFrame(BaseFrame):
 
         if self.status_label:
             if running:
-                self.status_label.config(text="Running FastQC analysis...", fg="orange")
+                self.status_label.config(text="Running FastQC analysis...", fg="blue")
             else:
                 self._update_status()
 
         if self.progress_bar:
             if running:
+                if self.run_button:
+                    self.progress_bar.pack(
+                        fill="x", pady=(0, 15), before=self.run_button
+                    )
+                else:
+                    self.progress_bar.pack(fill="x", pady=(0, 15))
                 self.progress_bar.start()
             else:
                 self.progress_bar.stop()
+                self.progress_bar.pack_forget()
+
+    def _format_elapsed_time(self, elapsed_seconds: float) -> str:
+        """Format elapsed time as minutes and seconds"""
+        minutes = int(elapsed_seconds // 60)
+        seconds = int(elapsed_seconds % 60)
+
+        if minutes > 0:
+            return f"{minutes} minute(s) and {seconds} second(s)"
+        else:
+            return f"{seconds} second(s)"
 
     def _on_fastqc_complete(self, success: bool, error: Optional[Exception]) -> None:
         """Handle FastQC completion"""
         self._set_running_state(False)
 
         if success:
+            # Calculate elapsed time
+            elapsed_time = ""
+            if self.start_time is not None:
+                elapsed_seconds = time.time() - self.start_time
+                elapsed_time = (
+                    f"\n\nProcessing time: {self._format_elapsed_time(elapsed_seconds)}"
+                )
+
             if self.status_label:
                 self.status_label.config(
                     text="FastQC analysis completed successfully!", fg="green"
                 )
-            messagebox.showinfo("Success", "FastQC analysis completed successfully!")
+
+            success_message = f"FastQC analysis completed successfully!{elapsed_time}"
+            messagebox.showinfo("Success", success_message)
         else:
             if self.status_label:
                 self.status_label.config(text="FastQC analysis failed", fg="red")
