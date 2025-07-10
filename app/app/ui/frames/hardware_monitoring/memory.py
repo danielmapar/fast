@@ -41,6 +41,9 @@ class MemoryFrame(BaseFrame):
 
         super().__init__(notebook, "Memory")
 
+    def testttt(self):
+        print("test")
+
     @override
     def setup_frame(self) -> None:
         """Initialize the memory monitoring interface."""
