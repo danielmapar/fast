@@ -1,4 +1,6 @@
 import platform
+import threading
+import time
 import tkinter as tk
 import tkinter.ttk as ttk
 from typing import Any, Dict, List, Optional, override
@@ -40,6 +42,11 @@ class CPUFrame(BaseFrame):
             self.UPDATE_INTERVAL * 2 if self.is_windows else self.UPDATE_INTERVAL
         )
 
+        # Process monitoring state
+        self._process_cpu_cache: List[Dict[str, Any]] = []
+        self._last_process_scan: float = 0.0
+        self._process_lock = threading.Lock()
+
         # Initialize baseline CPU measurements for immediate data availability
         self._initialize_cpu_baseline()
 
@@ -51,9 +58,29 @@ class CPUFrame(BaseFrame):
             # Call cpu_percent to establish baseline - this first call will return 0.0 but sets up future calls
             psutil.cpu_percent(interval=None)
             psutil.cpu_percent(interval=None, percpu=True)
+
+            # Initialize process baselines
+            self._initialize_process_baselines()
+
             self.logger.debug("CPU baseline measurements initialized")
         except Exception as e:
             self.logger.error(f"Error initializing CPU baseline: {e}")
+
+    def _initialize_process_baselines(self) -> None:
+        """Initialize process CPU measurement baselines."""
+        try:
+            for proc in psutil.process_iter(["pid"]):
+                try:
+                    # First call to establish baseline
+                    proc.cpu_percent()
+                except (
+                    psutil.NoSuchProcess,
+                    psutil.AccessDenied,
+                    psutil.ZombieProcess,
+                ):
+                    continue
+        except Exception as e:
+            self.logger.error(f"Error initializing process baselines: {e}")
 
     @override
     def setup_frame(self) -> None:
@@ -73,9 +100,13 @@ class CPUFrame(BaseFrame):
     def _collect_data_threaded(self) -> Optional[Dict[str, Any]]:
         """Collect all CPU data in background thread."""
         try:
+            # Use blocking interval for more accurate measurements
+            cpu_percent = psutil.cpu_percent(interval=0.5)
+            per_cpu_percent = psutil.cpu_percent(interval=0.1, percpu=True)
+
             return {
-                "cpu_percent": psutil.cpu_percent(interval=None),
-                "per_cpu_percent": psutil.cpu_percent(interval=None, percpu=True),
+                "cpu_percent": cpu_percent,
+                "per_cpu_percent": per_cpu_percent,
                 "logical_cpus": psutil.cpu_count(logical=True),
                 "physical_cpus": psutil.cpu_count(logical=False),
                 "cpu_freq": self._safe_get_cpu_freq(),
@@ -251,33 +282,81 @@ class CPUFrame(BaseFrame):
             return None
 
     def _get_top_processes(self) -> List[Dict]:
-        """Get top processes sorted by CPU usage."""
-        processes = []
-        try:
-            for proc in psutil.process_iter(
-                ["pid", "name", "cpu_percent", "memory_percent"]
-            ):
-                try:
-                    info = proc.info
-                    if info and info.get("cpu_percent") is not None:
-                        processes.append(info)
-                except (
-                    psutil.NoSuchProcess,
-                    psutil.AccessDenied,
-                    psutil.ZombieProcess,
-                ):
-                    continue
+        """Get top 10 processes sorted by CPU usage percentage using proper measurement technique."""
+        current_time = time.time()
 
-                # Limit for performance
-                if len(processes) > 100:
-                    break
+        # Only update process list every 2 seconds to reduce overhead
+        if current_time - self._last_process_scan < 2.0:
+            return self._get_cached_processes()
 
-        except Exception as e:
-            self.logger.error(f"Error getting processes: {e}")
+        with self._process_lock:
+            self._last_process_scan = current_time
+            processes = []
 
-        return sorted(
-            processes, key=lambda x: x.get("cpu_percent", 0) or 0, reverse=True
-        )
+            try:
+                # Get all processes first
+                all_processes = list(
+                    psutil.process_iter(["pid", "name", "memory_percent"])
+                )
+
+                # First pass: establish baseline (if not already done)
+                baseline_procs = []
+                for proc in all_processes:
+                    try:
+                        # Call cpu_percent() to establish baseline
+                        proc.cpu_percent()
+                        baseline_procs.append(proc)
+                    except (
+                        psutil.NoSuchProcess,
+                        psutil.AccessDenied,
+                        psutil.ZombieProcess,
+                    ):
+                        continue
+
+                # Wait for measurement interval
+                time.sleep(0.5)
+
+                # Second pass: get actual measurements
+                for proc in baseline_procs:
+                    try:
+                        with proc.oneshot():
+                            # Now get the actual CPU percentage
+                            cpu_percent = proc.cpu_percent()
+
+                            # Skip processes with 0% CPU to focus on active ones
+                            if cpu_percent > 0:
+                                process_info = {
+                                    "pid": proc.info["pid"],
+                                    "name": proc.info["name"] or "Unknown",
+                                    "cpu_percent": cpu_percent,
+                                    "memory_percent": proc.info["memory_percent"]
+                                    or 0.0,
+                                }
+                                processes.append(process_info)
+
+                    except (
+                        psutil.NoSuchProcess,
+                        psutil.AccessDenied,
+                        psutil.ZombieProcess,
+                    ):
+                        continue
+                    except Exception:
+                        continue
+
+                # Sort by CPU percentage (highest first) and cache result
+                processes.sort(key=lambda p: p["cpu_percent"], reverse=True)
+                self._process_cpu_cache = processes[:10]
+
+                return self._process_cpu_cache
+
+            except Exception as e:
+                self.logger.error(f"Error collecting process data: {e}")
+                return []
+
+    def _get_cached_processes(self) -> List[Dict]:
+        """Return cached process data to avoid expensive frequent scanning."""
+        with self._process_lock:
+            return self._process_cpu_cache.copy()
 
     def _update_overall_usage(self, cpu_percent: float) -> None:
         """Update overall CPU usage display."""

@@ -38,6 +38,28 @@ class FastQCFrame(BaseFrame):
 
         super().__init__(notebook, "FastQC")
 
+    @override
+    def setup_frame(self) -> None:
+        # Main content with padding
+        main_frame = tk.Frame(self.get_scrollable_container())
+        main_frame.pack(fill="both", expand=True, padx=20, pady=15)
+
+        # Title
+        title_text = "FastQC - Quality Control Analysis"
+        title_label = tk.Label(main_frame, text=title_text, font=("Arial", 12, "bold"))
+        title_label.pack(pady=(0, 20))
+
+        # Create all sections
+        self._create_input_files_section(main_frame)
+        self._create_output_section(main_frame)
+        self._create_options_section(main_frame)
+        self._create_advanced_options_section(main_frame)
+        self._create_run_section(main_frame)
+
+        # Bind focus removal to all non-input widgets
+        # self._bind_focus_removal(main_frame)
+        # self._bind_focus_removal(container)
+
     def _remove_focus(self, event=None):
         """Remove focus from any focused widget when clicking on non-input areas"""
         if not event:
@@ -69,35 +91,9 @@ class FastQCFrame(BaseFrame):
                 "Listbox",
                 "Text",
                 "Button",
+                "Checkbutton",  # Add Checkbutton to exclusion list
             ]:
                 self._bind_focus_removal(child)
-
-    @override
-    def setup_frame(self) -> None:
-        """Setup the FastQC frame UI"""
-        container = self.get_scrollable_container()
-        if not container:
-            return
-
-        # Main content with padding
-        main_frame = tk.Frame(container)
-        main_frame.pack(fill="both", expand=True, padx=20, pady=15)
-
-        # Title
-        title_text = "FastQC - Quality Control Analysis"
-        title_label = tk.Label(main_frame, text=title_text, font=("Arial", 12, "bold"))
-        title_label.pack(pady=(0, 20))
-
-        # Create all sections
-        self._create_input_files_section(main_frame)
-        self._create_output_section(main_frame)
-        self._create_options_section(main_frame)
-        self._create_advanced_options_section(main_frame)
-        self._create_run_section(main_frame)
-
-        # Bind focus removal to all non-input widgets
-        self._bind_focus_removal(main_frame)
-        self._bind_focus_removal(container)
 
     def _detect_cpu_cores(self) -> int:
         """Detect the number of available CPU cores"""
@@ -220,13 +216,19 @@ class FastQCFrame(BaseFrame):
         tk.Label(format_frame, text="File Format:", width=15, anchor="w").pack(
             side="left"
         )
-        ttk.Combobox(
+        format_combo = ttk.Combobox(
             format_frame,
             textvariable=self.format_var,
             width=20,
             values=["auto", "fastq", "bam", "sam", "bam_mapped", "sam_mapped"],
             state="readonly",
-        ).pack(side="left", padx=(10, 0))
+        )
+        format_combo.pack(side="left", padx=(10, 0))
+
+        # Disable mouse wheel scrolling on format combobox
+        format_combo.bind("<MouseWheel>", lambda e: "break")
+        format_combo.bind("<Button-4>", lambda e: "break")  # Linux scroll up
+        format_combo.bind("<Button-5>", lambda e: "break")  # Linux scroll down
 
         # Threads selection row
         threads_frame = tk.Frame(options_frame)
@@ -443,6 +445,7 @@ class FastQCFrame(BaseFrame):
 
         # Extract option
         if not self.extract_var.get():
+            print("No extract")
             command.append("--noextract")
 
         # K-mers
