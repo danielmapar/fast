@@ -115,14 +115,9 @@ class FastPFrame(BaseFrame):
         self.split_by_lines_var = tk.StringVar(value="0")
         self.split_prefix_digits_var = tk.StringVar(value="4")
 
-        # Add missing variables after the existing ones:
-
         # Additional I/O and processing options
         self.verbose_var = tk.BooleanVar(value=False)
         self.interleaved_in_var = tk.BooleanVar(value=False)
-
-        # UMI delimiter (missing from existing UMI options)
-        self.umi_delim_var = tk.StringVar(value=":")
 
         # Advanced quality cutting options
         self.cut_front_window_size_var = tk.StringVar(value="4")
@@ -749,7 +744,7 @@ class FastPFrame(BaseFrame):
 
         # UMI prefix and skip
         umi_params_frame = tk.Frame(umi_frame)
-        umi_params_frame.pack(fill="x", pady=(0, 10))
+        umi_params_frame.pack(fill="x")
 
         tk.Label(umi_params_frame, text="UMI Prefix:", width=15, anchor="w").pack(
             side="left"
@@ -764,20 +759,6 @@ class FastPFrame(BaseFrame):
         tk.Entry(umi_params_frame, textvariable=self.umi_skip_var, width=10).pack(
             side="left", padx=(10, 0)
         )
-
-        # ADD UMI delimiter option
-        umi_delim_frame = tk.Frame(umi_frame)
-        umi_delim_frame.pack(fill="x")
-
-        tk.Label(umi_delim_frame, text="UMI Delimiter:", width=15, anchor="w").pack(
-            side="left"
-        )
-        tk.Entry(umi_delim_frame, textvariable=self.umi_delim_var, width=10).pack(
-            side="left", padx=(10, 20)
-        )
-        tk.Label(
-            umi_delim_frame, text="(default: :)", font=("Arial", 9), fg="gray"
-        ).pack(side="left")
 
     def _create_overlap_correction_section(self) -> None:
         """Create the overlap correction section"""
@@ -965,23 +946,6 @@ class FastPFrame(BaseFrame):
             text="Interleaved input (contains both R1 and R2)",
             variable=self.interleaved_in_var,
         ).pack(anchor="w", pady=(0, 5))
-
-        # UMI delimiter
-        umi_delim_frame = tk.Frame(io_frame)
-        umi_delim_frame.pack(fill="x", pady=(5, 0))
-
-        tk.Label(umi_delim_frame, text="UMI Delimiter:", width=15, anchor="w").pack(
-            side="left"
-        )
-        tk.Entry(umi_delim_frame, textvariable=self.umi_delim_var, width=10).pack(
-            side="left", padx=(10, 20)
-        )
-        tk.Label(
-            umi_delim_frame,
-            text="(delimiter between read name and UMI)",
-            font=("Arial", 9),
-            fg="gray",
-        ).pack(side="left")
 
     def _create_index_filtering_section(self) -> None:
         """Create the index filtering section"""
