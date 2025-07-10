@@ -133,7 +133,7 @@ class FastQCFrame(BaseFrame):
 
         tk.Button(
             button_frame,
-            text="Add Files",
+            text="+ Add Files",
             command=self._add_files,
             bg="#4CAF50",
             fg="white",
@@ -143,7 +143,7 @@ class FastQCFrame(BaseFrame):
 
         tk.Button(
             button_frame,
-            text="Add Directory",
+            text="+ Add Directory",
             command=self._add_directory,
             bg="#2196F3",
             fg="white",
@@ -153,7 +153,7 @@ class FastQCFrame(BaseFrame):
 
         tk.Button(
             button_frame,
-            text="Clear",
+            text="✖ Clear",
             command=self._clear_files,
             bg="#f44336",
             fg="white",
@@ -179,7 +179,11 @@ class FastQCFrame(BaseFrame):
 
         # Remove selected file button
         tk.Button(
-            files_frame, text="Remove Selected", command=self._remove_selected_file
+            files_frame,
+            text="✖ Remove Selected",
+            command=self._remove_selected_file,
+            padx=20,
+            pady=5,
         ).pack()
 
     def _create_output_section(self, parent: tk.Widget) -> None:
@@ -315,9 +319,9 @@ class FastQCFrame(BaseFrame):
         # Run button
         self.run_button = tk.Button(
             run_frame,
-            text="Run FastQC Analysis",
+            text="▶ Run FastQC Analysis",
             command=self._run_fastqc,
-            bg="#FF9800",
+            bg="#4CAF50",
             fg="white",
             font=("Arial", 12, "bold"),
             pady=15,

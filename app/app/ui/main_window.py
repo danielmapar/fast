@@ -61,9 +61,9 @@ class MainWindow:
 
         hardware_button = tk.Button(
             button_frame,
-            text="Open Hardware Monitoring",
+            text="⚙ Open Hardware Monitoring",
             command=self._open_hardware_monitoring_window,
-            bg="#4CAF50",
+            bg="#1e3a8a",
             fg="white",
             font=("Arial", 10, "bold"),
             padx=20,
