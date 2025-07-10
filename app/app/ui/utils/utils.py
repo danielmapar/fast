@@ -37,18 +37,23 @@ class WindowUtils:
         repo_link.bind("<Button-1>", lambda e: open_repository())
 
     @staticmethod
-    def center_window(window: Union[tk.Tk, tk.Toplevel]) -> None:
+    def center_window(
+        window: Union[tk.Tk, tk.Toplevel],
+        width_percentage: float = 1,
+        height_percentage: float = 1,
+    ) -> None:
         window.update_idletasks()
 
         screen_width = window.winfo_screenwidth()
         screen_height = window.winfo_screenheight()
-        window_width = window.winfo_width()
-        window_height = window.winfo_height()
+        window_width = window.winfo_width() * width_percentage
+        window_height = window.winfo_height() * height_percentage
 
         position_x = (screen_width // 2) - (window_width // 2)
         position_y = (screen_height // 2) - (window_height // 2)
 
         window.geometry(f"+{position_x}+{position_y}")
+        window.minsize(int(window_width), int(window_height))
 
         # Bring window to front
         window.lift()

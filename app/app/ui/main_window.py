@@ -43,7 +43,7 @@ class MainWindow:
         self._create_tools_tabs()
         self._create_hardware_monitoring_button()
 
-        WindowUtils.center_window(self._parent)
+        WindowUtils.center_window(self._parent, 1.8, 1.8)
 
     def _create_tools_tabs(self) -> None:
         self._tools_notebook = ttk.Notebook(self._parent)
