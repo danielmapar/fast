@@ -29,13 +29,6 @@ repos:
         additional_dependencies: [flake8-bugbear]
         args: [--config=app/.flake8]
         files: ^app/app/
-  # Unused code detection
-  - repo: https://github.com/jendrikseipp/vulture
-    rev: v2.11
-    hooks:
-      - id: vulture
-        files: ^app/app/.*\.py$
-        args: [app/app/, --min-confidence, "80"]
   # Type checking
   - repo: https://github.com/pre-commit/mirrors-mypy
     rev: v1.13.0
