@@ -38,7 +38,7 @@ class FastQCFrame(BaseFrame):
 
         super().__init__(notebook, "FastQC")
 
-    def test(self):
+    def testasdasd(self):
         print("test")
 
     @override
