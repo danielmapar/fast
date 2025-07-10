@@ -19,15 +19,9 @@ class MainWindow:
 
         # Tools UI elements
         self._tools_notebook: Optional[ttk.Notebook] = None
-        self._fastqc_frame: Optional[BaseFrame] = (
-            None  # vulture: disable=unused-attribute
-        )
-        self._fastp_frame: Optional[BaseFrame] = (
-            None  # vulture: disable=unused-attribute
-        )
-        self._hybpiper_frame: Optional[BaseFrame] = (
-            None  # vulture: disable=unused-attribute
-        )
+        # self._fastqc_frame: Optional[BaseFrame] = None
+        # self._fastp_frame: Optional[BaseFrame] = None
+        # self._hybpiper_frame: Optional[BaseFrame] = None
 
         # Hardware monitoring UI elements
         self._hardware_monitoring_window: Optional[tk.Toplevel] = None
@@ -56,15 +50,9 @@ class MainWindow:
         self._tools_notebook.pack(fill="both", expand=True, padx=10, pady=10)
 
         # Create tool frames
-        self._fastqc_frame = FastQCFrame(
-            self._tools_notebook
-        )  # vulture: disable=unused-attribute
-        self._fastp_frame = FastPFrame(
-            self._tools_notebook
-        )  # vulture: disable=unused-attribute
-        self._hybpiper_frame = HybPiperFrame(
-            self._tools_notebook
-        )  # vulture: disable=unused-attribute
+        FastQCFrame(self._tools_notebook)
+        FastPFrame(self._tools_notebook)
+        HybPiperFrame(self._tools_notebook)
 
     def _create_hardware_monitoring_button(self) -> None:
         """Create a button to open hardware monitoring in a separate window"""
