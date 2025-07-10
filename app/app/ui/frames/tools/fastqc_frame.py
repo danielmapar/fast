@@ -8,13 +8,16 @@ from typing import List, Optional, override
 import psutil
 
 from app.library.manager import LibraryManager
+from app.logger.config import Logger, LogType
 from app.thread.lambda_runner import LambdaThreadRunner
 from app.ui.frames.base_frame import BaseFrame
+from app.ui.widgets.log_file_monitor import LogFileMonitor
 
 
 class FastQCFrame(BaseFrame):
     def __init__(self, notebook: ttk.Notebook) -> None:
         self._library_manager = LibraryManager()
+        self._fastqc_log_file = Logger().get_log_file_path(LogType.FASTQC)
 
         # UI Variables
         self.input_files: List[str] = []
@@ -399,6 +402,13 @@ class FastQCFrame(BaseFrame):
         )
         self.run_button.pack(fill="x")
 
+        # Log file monitor
+        self._log_monitor_panel = LogFileMonitor(
+            self.main_frame, file_path=self._fastqc_log_file, height=12, width=100
+        )
+        self._log_monitor_panel.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
+        # self._log_monitor_panel.pack_forget()
+
     def _add_files(self) -> None:
         """Add individual files to the input list"""
         files = filedialog.askopenfilenames(
@@ -660,6 +670,20 @@ class FastQCFrame(BaseFrame):
             else:
                 self.progress_bar.stop()
                 self.progress_bar.pack_forget()
+
+        if self._log_monitor_panel:
+            if running:
+                self._log_monitor_panel.toggle_content()
+            else:
+                self._log_monitor_panel.toggle_content()
+
+            # # Log file monitor
+            # if self._log_monitor_panel:
+            #     if running:
+            #         self._log_monitor_panel.pack(fill=tk.BOTH, expand=True, padx=10, pady=5, after=self.progress_bar)
+            #         self._log_monitor_panel.toggle_content()
+            #     else:
+            #         self._log_monitor_panel.pack_forget()
 
     def _format_elapsed_time(self, elapsed_seconds: float) -> str:
         """Format elapsed time as minutes and seconds"""

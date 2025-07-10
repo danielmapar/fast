@@ -17,7 +17,7 @@ class LogFileMonitor(tk.Frame):
         file_path: Optional[str] = None,
         height: int = 10,
         width: int = 100,
-        title: str = "Log Monitor",
+        title: str = "Logs",
         **kwargs: Any,
     ) -> None:
         super().__init__(parent, **kwargs)
@@ -64,7 +64,7 @@ class LogFileMonitor(tk.Frame):
             relief=tk.FLAT,
             font=("Arial", 10, "bold"),
             anchor="w",
-            command=self._toggle_content,
+            command=self.toggle_content,
         )
         self._title_button.pack(fill=tk.X)
 
@@ -96,10 +96,13 @@ class LogFileMonitor(tk.Frame):
         scrollbar.config(command=self._text_widget.yview)
 
         # Insert placeholder text
-        self._text_widget.insert("1.0", "No log file specified...")
+        self._text_widget.insert("1.0", ">")
         self._text_widget.config(state=tk.DISABLED)  # Make read-only
 
-    def _toggle_content(self) -> None:
+        # Do not show the content initially
+        self.toggle_content()
+
+    def toggle_content(self) -> None:
         """Toggle the visibility of the log content"""
         if self._content_visible:
             # Hide content
@@ -121,11 +124,11 @@ class LogFileMonitor(tk.Frame):
             # Restore black background when content is visible
             self.configure(bg="black")
 
-    def _set_title(self, title: str) -> None:
-        """Update the title text"""
-        self._title_text = title
-        arrow = "▼" if self._content_visible else "▶"
-        self._title_button.config(text=f"{arrow} {self._title_text}")
+    # def _set_title(self, title: str) -> None:
+    #     """Update the title text"""
+    #     self._title_text = title
+    #     arrow = "▼" if self._content_visible else "▶"
+    #     self._title_button.config(text=f"{arrow} {self._title_text}")
 
     def set_file_path(self, file_path: str) -> None:
         """Change the file being monitored"""
@@ -141,7 +144,7 @@ class LogFileMonitor(tk.Frame):
         #     filename = os.path.basename(file_path)
         #     self._set_title(f"Log Monitor - {filename}")
         # else:
-        self._set_title("Log Monitor")
+        # self._set_title("Logs")
 
         # Clear the display
         self._clear_display()
@@ -255,7 +258,7 @@ class LogFileMonitor(tk.Frame):
             else:
                 # Check if we need to clear placeholder text
                 current_content = self._text_widget.get("1.0", "end-1c")
-                if current_content in ["No log file specified...", ""]:
+                if current_content in ["No log file specified...", ">", ""]:
                     self._text_widget.delete("1.0", tk.END)
 
                 # Append new content
