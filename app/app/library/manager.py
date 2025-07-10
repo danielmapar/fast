@@ -113,3 +113,6 @@ class LibraryManager:
 
     def run_fastp_command(self, commands: List[str]) -> None:
         self.library_runner.run_fastp_command(commands)
+
+    def run_hybpiper_command(self, commands: List[str]) -> None:
+        self.library_runner.run_hybpiper_command(commands)

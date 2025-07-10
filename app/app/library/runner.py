@@ -26,6 +26,7 @@ class LibraryRunner:
         self._logger_testing_libraries = Logger().get_logger(LogType.TESTING_LIBRARIES)
         self._logger_fastqc = Logger().get_logger(LogType.FASTQC)
         self._logger_fastp = Logger().get_logger(LogType.FASTP)
+        self._logger_hybpiper = Logger().get_logger(LogType.HYBPIPER)
         self._subprocess_manager_testing_libraries: SubprocessManager = (
             SubprocessManager(self._logger_testing_libraries)
         )
@@ -34,6 +35,9 @@ class LibraryRunner:
         )
         self._subprocess_manager_fastp: SubprocessManager = SubprocessManager(
             self._logger_fastp
+        )
+        self._subprocess_manager_hybpiper: SubprocessManager = SubprocessManager(
+            self._logger_hybpiper
         )
 
     def test_all_libraries(self) -> bool:
@@ -371,3 +375,40 @@ class LibraryRunner:
             )
         else:
             self._logger_fastp.info("FastP command completed successfully")
+
+    def run_hybpiper_command(self, commands: List[str]) -> None:
+        """
+        Run HybPiper command with the given arguments
+
+        Args:
+            commands: List of command line arguments for HybPiper
+        """
+        # Set up paths
+        hybpiper_executable = os.path.join(self._conda_path, "bin", "conda")
+
+        # Verify executable exists
+        if not os.path.exists(hybpiper_executable):
+            raise FileNotFoundError(
+                f"HybPiper executable not found at: {hybpiper_executable}"
+            )
+
+        # Build the full command
+        full_command = [hybpiper_executable, "run", "-n", "hybpiper"]
+        full_command.extend(commands)
+
+        self._logger_hybpiper.info(
+            f"Running HybPiper command: {' '.join(full_command)}"
+        )
+
+        # Run the command
+        result = self._subprocess_manager_hybpiper.run_subprocess(full_command)
+
+        if result.returncode != 0:
+            self._logger_hybpiper.error(
+                f"HybPiper failed with return code {result.returncode}: {result.stderr}"
+            )
+            raise Exception(
+                f"HybPiper failed with return code {result.returncode}: {result.stderr}"
+            )
+        else:
+            self._logger_hybpiper.info("HybPiper command completed successfully")

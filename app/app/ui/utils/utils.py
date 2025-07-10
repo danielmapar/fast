@@ -1,3 +1,4 @@
+import os
 import tkinter as tk
 import webbrowser
 from typing import Union
@@ -27,7 +28,7 @@ class WindowUtils:
 
         repo_link = tk.Label(
             window,
-            text="danielmapar/fast",
+            text=f"danielmapar/fast ({os.getenv('APP_VERSION', 'unknown')})",
             fg="blue",
             cursor="hand2",
             bg="#FFFFFF",
