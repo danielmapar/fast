@@ -1614,7 +1614,7 @@ class FastPFrame(BaseFrame):
                     file_base = file_base[: -len(suffix)]
                     break
 
-            base_name = f"fastp_{file_base}"
+            base_name = f"{file_base}_fastp"
 
             html_report = os.path.join(self.output_dir.get(), f"{base_name}.html")
             json_report = os.path.join(self.output_dir.get(), f"{base_name}.json")
