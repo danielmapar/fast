@@ -14,3 +14,4 @@ app/app/library/__pycache__/
 app/app/logger/__pycache__/
 app/app/ui/styles/__pycache__/
 data/
+PAFTOL_*
