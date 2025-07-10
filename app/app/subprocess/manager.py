@@ -1,3 +1,4 @@
+import atexit
 import logging
 import subprocess
 import threading
@@ -7,6 +8,33 @@ class SubprocessManager:
     def __init__(self, logger: logging.Logger):
         # Loggers
         self.logger = logger
+        # Track active processes
+        self.active_processes: set[subprocess.Popen[str]] = set()
+        # Register cleanup on exit
+        atexit.register(self.cleanup)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self) -> None:
+        self.cleanup()
+
+    def cleanup(self):
+        """Kill all active processes"""
+        if not self.active_processes:
+            return
+
+        self.logger.info(
+            f"SubprocessManager cleanup: killing {len(self.active_processes)} active processes"
+        )
+        for process in list(self.active_processes):
+            try:
+                if process.poll() is None:  # Process is still running
+                    process.kill()  # SIGKILL on Unix, TerminateProcess on Windows
+                    self.logger.info(f"Killed process {process.pid}")
+            except Exception as e:
+                self.logger.error(f"Failed to kill process {process.pid}: {e}")
+        self.active_processes.clear()
 
     def run_subprocess(self, command: list[str]) -> subprocess.CompletedProcess[str]:
         """Run subprocess command with real-time line-by-line logging"""
@@ -20,6 +48,9 @@ class SubprocessManager:
                 bufsize=1,  # Line buffered
                 universal_newlines=True,
             )
+
+            # Track this process
+            self.active_processes.add(process)
 
             # Collect output for return value
             stdout_lines: list[str] = []
@@ -58,6 +89,9 @@ class SubprocessManager:
             stdout_thread.join()
             stderr_thread.join()
 
+            # Remove completed process from tracking
+            self.active_processes.discard(process)
+
             # Create and return CompletedProcess object
             return subprocess.CompletedProcess(
                 args=command,
@@ -67,6 +101,8 @@ class SubprocessManager:
             )
 
         except Exception as e:
+            # Remove failed process from tracking
+            self.active_processes.discard(process)
             self.logger.error(f"Subprocess failed: {' '.join(command)}")
             self.logger.error(f"Error: {e}")
             raise

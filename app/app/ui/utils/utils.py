@@ -52,7 +52,7 @@ class WindowUtils:
         position_x = (screen_width // 2) - (window_width // 2)
         position_y = (screen_height // 2) - (window_height // 2)
 
-        window.geometry(f"+{position_x}+{position_y}")
+        window.geometry(f"+{int(position_x)}+{int(position_y)}")
         window.minsize(int(window_width), int(window_height))
 
         # Bring window to front
