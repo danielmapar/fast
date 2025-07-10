@@ -25,11 +25,15 @@ class LibraryRunner:
         # Loggers
         self._logger_testing_libraries = Logger().get_logger(LogType.TESTING_LIBRARIES)
         self._logger_fastqc = Logger().get_logger(LogType.FASTQC)
+        self._logger_fastp = Logger().get_logger(LogType.FASTP)
         self._subprocess_manager_testing_libraries: SubprocessManager = (
             SubprocessManager(self._logger_testing_libraries)
         )
         self._subprocess_manager_fastqc: SubprocessManager = SubprocessManager(
             self._logger_fastqc
+        )
+        self._subprocess_manager_fastp: SubprocessManager = SubprocessManager(
+            self._logger_fastp
         )
 
     def test_all_libraries(self) -> bool:
@@ -332,3 +336,38 @@ class LibraryRunner:
             )
         else:
             self._logger_fastqc.info("FastQC command completed successfully")
+
+    def run_fastp_command(self, commands: List[str]) -> None:
+        """
+        Run FastP command with the given arguments
+
+        Args:
+            commands: List of command line arguments for FastP
+        """
+        # Set up paths
+        fastp_executable = self._fastp_path
+
+        # Verify executable exists
+        if not os.path.exists(fastp_executable):
+            raise FileNotFoundError(
+                f"FastP executable not found at: {fastp_executable}"
+            )
+
+        # Build the full command
+        full_command = [fastp_executable]
+        full_command.extend(commands)
+
+        self._logger_fastp.info(f"Running FastP command: {' '.join(full_command)}")
+
+        # Run the command
+        result = self._subprocess_manager_fastp.run_subprocess(full_command)
+
+        if result.returncode != 0:
+            self._logger_fastp.error(
+                f"FastP failed with return code {result.returncode}: {result.stderr}"
+            )
+            raise Exception(
+                f"FastP failed with return code {result.returncode}: {result.stderr}"
+            )
+        else:
+            self._logger_fastp.info("FastP command completed successfully")

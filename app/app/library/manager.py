@@ -110,3 +110,6 @@ class LibraryManager:
 
     def run_fastqc_command(self, commands: List[str]) -> None:
         self.library_runner.run_fastqc_command(commands)
+
+    def run_fastp_command(self, commands: List[str]) -> None:
+        self.library_runner.run_fastp_command(commands)
