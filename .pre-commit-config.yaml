@@ -34,8 +34,8 @@ repos:
     rev: v2.11
     hooks:
       - id: vulture
-        files: ^app/app/
-        args: [--min-confidence, "80"]
+        files: ^app/app/.*\.py$
+        args: [app/app/, --min-confidence, "80"]
   # Type checking
   - repo: https://github.com/pre-commit/mirrors-mypy
     rev: v1.13.0
