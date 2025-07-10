@@ -44,3 +44,24 @@ repos:
         args: ["--profile", "black", "--filter-files"]
         language_version: python3
         files: ^app/app/
+  # Modern fast linting with unused code detection
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.1.15
+    hooks:
+      - id: ruff
+        args: [--select, F401,F841,ARG001,ARG002]  # unused imports, variables, arguments
+        files: ^app/app/
+  # Pylint for comprehensive checking including unused methods
+  - repo: https://github.com/pycqa/pylint
+    rev: v3.0.3
+    hooks:
+      - id: pylint
+        args: [--disable=all, --enable=unused-variable,unused-argument,unused-import,unused-wildcard-import]
+        files: ^app/app/
+  # Unused code detection with custom config
+  - repo: https://github.com/jendrikseipp/vulture
+    rev: v2.11
+    hooks:
+      - id: vulture
+        args: [app/app/, --config=app/vulture.toml]
+        pass_filenames: false
