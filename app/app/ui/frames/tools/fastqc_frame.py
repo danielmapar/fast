@@ -38,6 +38,9 @@ class FastQCFrame(BaseFrame):
 
         super().__init__(notebook, "FastQC")
 
+    def test(self):
+        print("test")
+
     @override
     def setup_frame(self) -> None:
         # Main content with padding
