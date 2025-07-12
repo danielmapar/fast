@@ -14,10 +14,11 @@ This application is an aggregator of [FastQC](https://github.com/s-andrews/FastQ
 
 * Run the app by double-clicking on the `FastApp` executable.
 
-## Demo
+## Demo Video
 
-[![Fast App Demo](https://img.youtube.com/vi/0/0.jpg)](http://www.youtube.com/watch?v=NVH6B-lsmhE)
-
+<a href="https://www.youtube.com/watch?v=NVH6B-lsmhE">
+  <img src="https://img.youtube.com/vi/NVH6B-lsmhE/maxresdefault.jpg" alt="Watch the video">
+</a>
 
 ## Local Development
 
